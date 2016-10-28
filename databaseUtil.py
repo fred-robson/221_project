@@ -19,7 +19,7 @@ def set_up_db():
 	    sys.exit(1)	    
 
 class databaseAccess():
-
+	#Class that allows easy access to database functionality 
 	def __init__(self):
 		self.cur = set_up_db()
 		self.columns=[]
