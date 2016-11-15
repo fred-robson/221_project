@@ -17,7 +17,6 @@ class Baseline():
 for year in ["2011","2012","2013","2014","2015"]:
 	for month in ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]: 
 		date = "{}-{}".format(month,year)
-		
 		for term in [36,60]:
 			b = Baseline(date)
 			print date, term, b.percentReturn()
