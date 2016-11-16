@@ -41,4 +41,4 @@ class databaseAccess():
 
 #For testing the data...
 if __name__ == "__main__":
-	with open(data)
+	pass
