@@ -13,7 +13,7 @@ Data types available for sql tables:
 # VARYING CHARACTER(255)
 # NCHAR(55)
 # NATIVE CHARACTER(70)
-# NVARCHAR(100
+# NVARCHAR(100)
 # TEXT
 # CLOB
 # BLOB
