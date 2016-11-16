@@ -1,4 +1,4 @@
-#Series of classes/functions for being used 
+#Series of classes/functions for accesing the database
 import sqlite3 as lite
 import sys,csv
 
@@ -7,7 +7,9 @@ DB_NAME = 'data/database.sqlite'
 
 def set_up_db():
 	'''
-	
+	Accesses the sql database
+	@return: 
+		- returns cursor and connection 
 	'''
 	con = None
 	try:
@@ -35,3 +37,8 @@ class databaseAccess():
 		execute_string = ("SELECT * FROM {} WHERE issue_d = '{}' AND term = ' {} months'").format(TABLE,month,term)
 		self.cur.execute(execute_string)
 		return self.cur.fetchall()
+
+
+#For testing the data...
+if __name__ == "__main__":
+	with open(data)
