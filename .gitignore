@@ -1,3 +1,5 @@
 *.csv
 milestones/*
 data/*
+*.pyc
+*.py.orig
