@@ -3,7 +3,7 @@ import sqlite3 as lite
 import sys,csv
 import random
 TABLE = 'loan'
-DB_NAME = 'database.sqlite'
+DB_NAME = 'data/database.sqlite'
 STR_TYPES = ['CHARACTER(20)', 'VARCHAR(255)', 'VARYING CHARACTER(255)', 'NCHAR(55)', 'NATIVE CHARACTER(70)', 'NVARCHAR(100)', 'TEXT']
 def set_up_db():
 	'''
@@ -95,11 +95,12 @@ class databaseAccess():
 		self.cur.execute(execute_string)
 		return self.cur.fetchall()
 
-db = databaseAccess()
-flist = {}
-flist["issue_d"] = "VARCHAR(255)"
-flist["total_pymnt"] = "INT"
-#flist["funded_amnt"] = "INT"
-db.update_table_features(flist)
-# db.partition_data({"total_pymnt": "INT", "funded_amnt": "INT"})
-#db.add_columns()
+if __name__ == "__main__":
+	db = databaseAccess()
+	flist = {}
+	flist["issue_d"] = "VARCHAR(255)"
+	flist["total_pymnt"] = "INT"
+	#flist["funded_amnt"] = "INT"
+	db.update_table_features(flist)
+	# db.partition_data({"total_pymnt": "INT", "funded_amnt": "INT"})
+	#db.add_columns()
