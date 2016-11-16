@@ -4,7 +4,7 @@ import sys,csv
 import random
 TABLE = 'loan'
 DB_NAME = 'database.sqlite'
-
+STR_TYPES = ['CHARACTER(20)', 'VARCHAR(255)', 'VARYING CHARACTER(255)', 'NCHAR(55)', 'NATIVE CHARACTER(70)', 'NVARCHAR(100)', 'TEXT']
 def set_up_db():
 	'''
 	
@@ -46,7 +46,10 @@ class databaseAccess():
 			for loan in loan_set:
 				query = "INSERT OR IGNORE INTO {} VALUES ({},".format(table_name, loan[0])
 				for k in features.keys():
-					query += " {},".format(loan[self.col_name_list[k]])
+					if features[k] in STR_TYPES: query += '\''
+					query += " {}".format(loan[self.col_name_list[k]])
+					if features[k] in STR_TYPES: query += '\''
+					query += ","
 				query = query[:-1] + ")"
 				self.cur.execute(query)
 				self.con.commit()
@@ -92,6 +95,7 @@ class databaseAccess():
 
 db = databaseAccess()
 flist = {}
+flist["issue_d"] = "VARCHAR(255)"
 flist["total_pymnt"] = "INT"
 #flist["funded_amnt"] = "INT"
 db.update_table_features(flist)
