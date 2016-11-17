@@ -59,14 +59,14 @@ class databaseAccess():
 		loans = self.extract_term_loans(36)
 		n = len(loans) / 2
 		random.shuffle(loans)
-		populate_table("TestThirtySix".format(tbl), loans[:n])
-		populate_table("TrainThirtySix".format(tbl), loans[n:])
+		populate_table("TestThirtySix", loans[:n])
+		populate_table("TrainThirtySix", loans[n:])
 		
 		loans = self.extract_term_loans(60)
 		n = len(loans) / 2
 		random.shuffle(loans)
-		populate_table("TestSixty".format(tbl), loans[:n])
-		populate_table("TrainSixty".format(tbl), loans[n:])
+		populate_table("TestSixty", loans[:n])
+		populate_table("TrainSixty", loans[n:])
 		
 	# Features dict => { "column_name": DATA_TYPE } 
 	# Refer to data/data_types.txt.
