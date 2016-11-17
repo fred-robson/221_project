@@ -1,4 +1,10 @@
-#File for learning risk of default and then predicting Expected Return and Return Variance
+'''
+The expected returns class predicts the expected return of a loan and the 
+variance of that loan. It does so by: 
+	- predicting the risk of default in any given month for a loan using stochastic gradient descent
+	- Using the risk of default to run multiple monte carlo simulations, thereby learning the 
+	  expected return and the variance of the return
+'''
 
 import collections,random, csv
 import util.machineLearningUtil as mlUtil
@@ -107,7 +113,7 @@ class expectedReturn(mlUtil.gradientDescent):
 	def calculateAllExpReturnAndVar(self,updateWeights,numItersGD,eta,numItersMC,usePickle=False):
 		'''
 		Runs a monte carlo simulation for every single loan with term of self.termLength to calculate expected return
-		and variance. Then updates the values in the testTable
+		and variance. Then updates the values in the sql testTable
 		@params: 
 			- updateWeights: the function to update the weights updateWeights(weights,phiX,y,eta)
 			- numItersGD: the number of iterations to run the gradient descent
