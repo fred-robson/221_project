@@ -1,8 +1,7 @@
 #Series of classes/functions for accesing the database
 import sqlite3 as lite
-import sys,csv
-import random
-TABLE = 'loan'
+import sys,csv,re, random
+
 DB_NAME = 'data/database.sqlite'
 STR_TYPES = ['CHARACTER(20)', 'VARCHAR(255)', 'VARYING CHARACTER(255)', 'NCHAR(55)', 'NATIVE CHARACTER(70)', 'NVARCHAR(100)', 'TEXT']
 def set_up_db():
@@ -15,14 +14,6 @@ def set_up_db():
 	try:
 	    con = lite.connect(DB_NAME)    
 	    cur = con.cursor()
-	    cur.execute("DROP TABLE IF EXISTS TestThirtySix");
-	    cur.execute("DROP TABLE IF EXISTS TrainThirtySix");
-	    cur.execute("DROP TABLE IF EXISTS TestSixty");
-	    cur.execute("DROP TABLE IF EXISTS TrainSixty");
-	    cur.execute("CREATE TABLE TestThirtySix (id INT PRIMARY KEY)");
-	    cur.execute("CREATE TABLE TrainThirtySix (id INT PRIMARY KEY)");
-	    cur.execute("CREATE TABLE TestSixty (id INT PRIMARY KEY)");
-	    cur.execute("CREATE TABLE TrainSixty (id INT PRIMARY KEY)");
 	    return cur,con
 	except lite.Error, e:	    
 	    print "Error %s:" % e.args[0]
@@ -37,8 +28,8 @@ class databaseAccess():
 		self.tables = ["TestThirtySix", "TrainThirtySix", "TestSixty", "TrainSixty"]
 
 	# Extracting loans based on term -- 36 or 60.
-	def extract_term_loans(self, term):
-		execute_string = ("SELECT * FROM {} WHERE term = ' {} months'").format(TABLE, term)
+	def extract_term_loans(self, term,table):
+		execute_string = ("SELECT * FROM {} WHERE term = ' {} months'").format(table,term)
 		self.cur.execute(execute_string)
 		return self.cur.fetchall()
 
@@ -56,13 +47,13 @@ class databaseAccess():
 				self.cur.execute(query)
 				self.con.commit()
 
-		loans = self.extract_term_loans(36)
+		loans = self.extract_term_loans(36,"loan")
 		n = len(loans) / 2
 		random.shuffle(loans)
 		populate_table("TestThirtySix", loans[:n])
 		populate_table("TrainThirtySix", loans[n:])
 		
-		loans = self.extract_term_loans(60)
+		loans = self.extract_term_loans(60,"loan")
 		n = len(loans) / 2
 		random.shuffle(loans)
 		populate_table("TestSixty", loans[:n])
@@ -86,23 +77,84 @@ class databaseAccess():
 		self.add_columns(features)
 		self.partition_data(features)
 
-	def get_loans_issued_in(self, month, term=36):
+
+	def updateTableValue(self,table,dictRow,colName,val):
+		#Updates a particular value in the table
+		#NOTE: need to commit for changes to take place
+		idNum = dictRow["id"]
+		query = "UPDATE {} SET {} = {} WHERE id = {}".format(table,colName,val,idNum)
+		self.con.execute(query)
+
+
+	def get_loans_issued_in(self, table, month, term=36):
 		'''
 		Returns a list of all the loans issued in @month
 		@params: 
 			month: The month the loan was issued in eg "Mar-2011"
 			return: a list of tuples, where each tuple is a single loan
 		'''
-		execute_string = ("SELECT * FROM {} WHERE issue_d = '{}' AND term = ' {} months'").format(TABLE,month,term)
+		execute_string = ("SELECT * FROM {} WHERE issue_d = '{}' AND term = ' {} months'").format(table,month,term)
 		self.cur.execute(execute_string)
 		return self.cur.fetchall()
 
-if __name__ == "__main__":
+	def getColumnNames(self,table):
+		#Matches the name of every column to its column number 
+		res = self.con.execute(("select * from {}").format(table))
+		return [t[0] for t in res.description]
+
+	@staticmethod
+	def stringToDate(dateString):
+		#Converts a LC string eg "Jan-2012" into (month (int),year(int)) tuple
+		if dateString == "None": 
+			return None
+		monthsInt = {"Jan":1,"Feb":2,"Mar":3,"Apr":4,"May":5,"Jun":6, \
+				  "Jul":7,"Aug":8,"Sep":9,"Oct":10,"Nov":11,"Dec":12}
+		m,y = dateString.split("-")
+		return monthsInt[m],int(y)
+
+	@staticmethod
+	def monthsDifference(t1,t2):
+		#Calculates the number of months between two
+		if t1 == None or t2 == None: return None
+		return abs(12*(t1[1]-t2[1])+t1[0]-t2[0])
+
+	@staticmethod
+	def subgradeToInt(subgrade):
+		#LC ranks from A1-G5 - converted to a linear scale 1-35
+		if(subgrade == "None"): return None
+		letterToInt = {"A":0,"B":5,"C":10,"D":15,"E":20,"F":25,"G":30}
+		score = letterToInt[subgrade[0]] + int(subgrade[1])
+		return score
+
+	@staticmethod
+	def numYearsEmployedToInt(text):
+		#Converts 10+years to 10
+		years = [int(x) for x in re.findall(r'\d+', text)]
+		if(len(years)>0): return max(years)
+		return 0
+
+def updateSecondaryTables():
+	#code that was previously in main
 	db = databaseAccess()
 	flist = {}
 	flist["issue_d"] = "VARCHAR(255)"
 	flist["total_pymnt"] = "INT"
-	#flist["funded_amnt"] = "INT"
+	flist["installment"] = "FLOAT"
+	flist["grade"] = "TEXT"
+	flist["sub_grade"] = "TEXT"
+	flist["emp_length"] = "TEXT"
+	flist["home_ownership"] = "TEXT"
+	flist["dti"] = "FLOAT"
+	flist["loan_status"] = "TEXT"
+	flist["last_pymnt_d"] = "TEXT"
+	flist["funded_amnt"] = "INT"
+	flist["exp_r"] = "FLOAT"
+	flist["var"] = "FLOAT"
+	flist["cluster"] = "INT"
 	db.update_table_features(flist)
 	# db.partition_data({"total_pymnt": "INT", "funded_amnt": "INT"})
 	#db.add_columns()
+
+if __name__ == "__main__":
+	d = databaseAccess()
+	print databaseAccess.subgradeToInt("G5")
