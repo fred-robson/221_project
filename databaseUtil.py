@@ -49,22 +49,24 @@ class databaseAccess():
 				query = "INSERT OR IGNORE INTO {} VALUES ({},".format(table_name, loan[0])
 				for k in features.keys():
 					if features[k] in STR_TYPES: query += '\''
-					query += " {}".format(loan[self.col_name_list[k]])
+					query += "{}".format(loan[self.col_name_list[k]])
 					if features[k] in STR_TYPES: query += '\''
 					query += ","
 				query = query[:-1] + ")"
 				self.cur.execute(query)
 				self.con.commit()
 
-		tbls = ["ThirtySix", "Sixty"]
-		terms = [36, 60]
-		for t in terms:
-			for tbl in tbls:
-				loans = self.extract_term_loans(t)
-				n = len(loans)
-				random.shuffle(loans)
-				populate_table("Test{}".format(tbl), loans[:n])
-				populate_table("Train{}".format(tbl), loans[n:])
+		loans = self.extract_term_loans(36)
+		n = len(loans) / 2
+		random.shuffle(loans)
+		populate_table("TestThirtySix".format(tbl), loans[:n])
+		populate_table("TrainThirtySix".format(tbl), loans[n:])
+		
+		loans = self.extract_term_loans(60)
+		n = len(loans) / 2
+		random.shuffle(loans)
+		populate_table("TestSixty".format(tbl), loans[:n])
+		populate_table("TrainSixty".format(tbl), loans[n:])
 		
 	# Features dict => { "column_name": DATA_TYPE } 
 	# Refer to data/data_types.txt.
