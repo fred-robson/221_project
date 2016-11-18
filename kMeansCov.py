@@ -83,5 +83,5 @@ class kMeans():
 		self.cash_flow_dict = generate_cash_flow_vectors()
 		self.covariances = calculate_group_cov()
 
-db = databaseAccess()
-kmeans = kMeans(db, "TrainSixty")
+# db = databaseAccess()
+# kmeans = kMeans(db, "TrainSixty")
