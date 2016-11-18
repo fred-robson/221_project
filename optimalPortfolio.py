@@ -1,4 +1,4 @@
-#Class representing an optimal portfolio
+#Class that allows you to calculate the optimal portfolio
 import util.machineLearningUtil as mlUtil
 import sys
 class optimalPortfolio():
@@ -27,6 +27,7 @@ class optimalPortfolio():
 		from_covar = 0
 		for li, liInfo in self.possibleLoans.iteritems():
 			for lj, ljInfo in self.possibleLoans.iteritems():
+				#Variances have already been included in from_var
 				if(li!=lj): from_covar+=self.weights[li]*self.weights[lj]*self.covariances[liInfo["loanGroup"]][ljInfo["loanGroup"]]
 		return from_var+from_covar
 
@@ -51,8 +52,7 @@ class optimalPortfolio():
 				if(lj==li): cov =liInfo["var"]
 				else: cov = self.covariances[liInfo["loanGroup"]][ljInfo["loanGroup"]]
 				sumWeightCov+=self.weights[lj]*cov
-			
-			#print (sumWeightCov*(expectedReturn-self.riskFreeReturn))/(sd**3)
+		
 			grad[li] = ri/sd - (sumWeightCov*(expectedReturn-self.riskFreeReturn))/(sd**3)		
 		return grad
 

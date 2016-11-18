@@ -7,7 +7,7 @@ YEARS = ["2011","2012","2013","2014","2015"]
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 
 class kMeans():
-	def __init__(self, db, loans):
+	def __init__(self, db, table):
 
 		def calculate_group_cov():
 			# builds covariance map for each cluster
@@ -31,8 +31,8 @@ class kMeans():
 				return date(year, month, 1)
 
 			loan_term = int(l[1].split()[0])
-			loan_issue_date = l[7]
-			loan_last_pymnt_date = l[3]
+			loan_issue_date = l[self.columns.index('issue_d')]
+			loan_last_pymnt_date = l[self.columns.index('last_pymnt_d')]
 			# print loan_issue_date, loan_last_pymnt_date
 			if loan_last_pymnt_date == "None": return l[2]
 			issue_month = MONTHS.index(loan_issue_date[: loan_issue_date.index('-')]) + 1
@@ -44,11 +44,11 @@ class kMeans():
 			last_date = date(last_year, last_month, 1)
 			projected_end_date = add_months(issue_date, loan_term)
 			if issue_date < curr_date and curr_date < last_date:
-				return l[2] # installment
+				return l[self.columns.index('installment')] # installment
 			if issue_date < curr_date and curr_date == last_date:
-				return l[5] # last_pymnt_amnt instead of installment.
+				return l[self.columns.index('last_pymnt_amnt')] # last_pymnt_amnt instead of installment.
 			if last_date < curr_date and curr_date <= projected_end_date:
-				return -l[2] # -installment because default
+				return -l[self.columns.index('installment')] # -installment because default
 			return 0 # loan not active
 
 		def generate_cash_flow_vectors():
@@ -69,7 +69,7 @@ class kMeans():
 			# clustering by zip_code
 			d = defaultdict(list)
 			for l in self.loans:
-				zip_code = l[8]
+				zip_code = l[self.columns.index('zip_code')]
 				if zip_code in d:
 					d[zip_code].append(l)
 				else:                                            
@@ -77,10 +77,11 @@ class kMeans():
 			return d
 
 		self.db = db
-		self.loans = loans
+		self.loans = db.extract_table_loans(table)
+		self.columns = db.getColumnNames(table)
 		self.clusters = cluster_loans()
 		self.cash_flow_dict = generate_cash_flow_vectors()
 		self.covariances = calculate_group_cov()
 
 db = databaseAccess()
-kmeans = kMeans(db, db.extract_table_loans("TrainSixty"))
+kmeans = kMeans(db, "TrainSixty")
