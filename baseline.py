@@ -2,14 +2,24 @@ from databaseUtil import databaseAccess
 
 class Baseline():
 
-	def __init__(self, month):
+	def __init__(self, table, month):
 		self.db = databaseAccess()
-		self.loans = self.db.get_loans_issued_in(month)
+		self.table = table 
+		self.loans = self.db.get_loans_issued_in(table,month)
+		self.columnNames = self.db.getColumnNames(self.table)
+
+	def dictRow(self,row):
+		#Converts a row from sql from a list to a dict
+		return {c:r for c,r in zip(self.columnNames,row)} 
 
 	def percentReturn(self):
-		numLoans = len(self.loans)
-		total_pymnt = self.db.col_name_list["total_pymnt"]
-		funded_amnt = self.db.col_name_list["funded_amnt"]
+		return sum(self.dictRow(loan)["total_pymnt"]/self.dictRow(loan)["funded_amnt"]\
+		       for loan in self.loans)/len(self.loans)
+
+		for loan in self.loans: 
+			loanDict = self.dictRow(loan)
+			total_pymnt = laon["total_pymnt"]
+			funded_amnt = self.db.col_name_list["funded_amnt"]
 
 		return sum(map(lambda l : (l[total_pymnt] / l[funded_amnt]) / numLoans, self.loans))
 		# return totalPayments / totalFunded
@@ -17,9 +27,8 @@ class Baseline():
 for year in ["2011","2012","2013","2014","2015"]:
 	for month in ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]: 
 		date = "{}-{}".format(month,year)
-		for term in [36,60]:
-			b = Baseline(date)
-			print date, term, b.percentReturn()
+		b = Baseline("TestThirtySix",date)
+		print date, b.percentReturn()
 
 
 
