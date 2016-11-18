@@ -30,11 +30,13 @@ class kMeans():
 				month = month % 12 + 1
 				return date(year, month, 1)
 
-			loan_term = int(l[1].split()[0])
+
+			loan_term = int(l[self.columns.index('term')].split()[0])
 			loan_issue_date = l[self.columns.index('issue_d')]
 			loan_last_pymnt_date = l[self.columns.index('last_pymnt_d')]
 			# print loan_issue_date, loan_last_pymnt_date
-			if loan_last_pymnt_date == "None": return l[2]
+			if loan_last_pymnt_date == "None": return l[self.columns.index('installment')]
+
 			issue_month = MONTHS.index(loan_issue_date[: loan_issue_date.index('-')]) + 1
 			issue_year = int(loan_issue_date[loan_issue_date.index('-') + 1:])
 			issue_date = date(issue_year, issue_month, 1)
@@ -61,7 +63,8 @@ class kMeans():
 						monthly_cash_flow = 0
 						for loan in v:
 							monthly_cash_flow += contribution_to_month(loan, date(int(year), month, 1)) # if contributing to monthly cash flow.
-						cash_flow.append(monthly_cash_flow/len(v))
+						cash_flow.append(monthly_cash_flow)
+
 				d[k] = cash_flow				
 			return d
 
@@ -83,5 +86,6 @@ class kMeans():
 		self.cash_flow_dict = generate_cash_flow_vectors()
 		self.covariances = calculate_group_cov()
 
-db = databaseAccess()
-kmeans = kMeans(db, "TrainSixty")
+
+# db = databaseAccess()
+# kmeans = kMeans(db, "TrainSixty")
