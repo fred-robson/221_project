@@ -30,7 +30,7 @@ class kMeans():
 				month = month % 12 + 1
 				return date(year, month, 1)
 
-			loan_term = int(l[1].split()[0])
+			loan_term = int(l[self.columns.index('term')].split()[0])
 			loan_issue_date = l[self.columns.index('issue_d')]
 			loan_last_pymnt_date = l[self.columns.index('last_pymnt_d')]
 			# print loan_issue_date, loan_last_pymnt_date
