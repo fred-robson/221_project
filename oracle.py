@@ -7,9 +7,16 @@ TERMS = [36,60] #Possible lengths of loans
 
 class oracle():
 	db = databaseUtil.databaseAccess()
+	def __init__(self,month,table):	
+		self.loans = oracle.db.get_loans_issued_in(table,month)
+		self.table = table
+		self.columnNames = self.db.getColumnNames(self.table)
 
-	@staticmethod 
-	def choose_best_portfolio(initial_investment, month, term):
+	def dictRow(self,row):
+		#Converts a row from sql from a list to a dict
+		return {c:r for c,r in zip(self.columnNames,row)}
+	
+	def choose_best_portfolio(self,initial_investment):
 		'''
 		Chooses the optimal portfolio of loans for a chosen issue date and term
 		@params: 
@@ -18,11 +25,11 @@ class oracle():
 			term: how long the loan is (36 or 60) in months
 			return: a list of the loans invested in. [(return to date, funded amount, loan row)]
 		'''
-		loans = oracle.db.get_loans_issued_in(month,term)
 		pq = Queue.PriorityQueue()
-		for l in loans:
-			total_payment = l[39]
-			funded_amnt = l[4]
+		for l in self.loans:
+			l = self.dictRow(l)
+			total_payment = l["total_pymnt"]
+			funded_amnt = l["funded_amnt"]
 			percent_return_td  = total_payment/funded_amnt
 			pq.put((-percent_return_td,l)) #negative to put highest returns at front of queue
 		
@@ -31,7 +38,7 @@ class oracle():
 		while invested<initial_investment:
 			
 			percent_return_td,l = pq.get()
-			funded_amnt = l[4]
+			funded_amnt = l["funded_amnt"]
 			#invest in part of loan to reach initial investment
 			if funded_amnt+invested>initial_investment:
 				funded_amnt = initial_investment - invested
@@ -45,11 +52,11 @@ class oracle():
 		#Works out the overall return to date of a portfolio in the form [(return to date, funded amount, loan)] 
 		return sum(x[0]*x[1] for x in investments)/sum(x[1] for x in investments)
 
-
-for year in ["2011","2012","2013","2014","2015"]:
-	for month in ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]: 
-		date = "{}-{}".format(month,year)
-		for term in [36,60]:
-			portfolio = oracle.choose_best_portfolio(100000,date,term)
-			print date,term,oracle.average_return(portfolio)
+if __name__ == "__main__":
+	for year in ["2011","2012","2013","2014","2015"]:
+		for month in ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]: 
+			date = "{}-{}".format(month,year)
+			o = oracle(date,"TestThirtySix")
+			portfolio = o.choose_best_portfolio(10000000)
+			print date,oracle.average_return(portfolio)
 
