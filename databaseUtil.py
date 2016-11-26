@@ -150,6 +150,7 @@ def updateSecondaryTables():
 	flist = {}
 	flist["issue_d"] = "VARCHAR(255)"
 	flist["total_pymnt"] = "INT"
+	flist["zip_code"] = "TEXT"
 	flist["installment"] = "FLOAT"
 	flist["grade"] = "TEXT"
 	flist["sub_grade"] = "TEXT"
