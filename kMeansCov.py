@@ -10,7 +10,12 @@ class kMeans():
 	def __init__(self, db, table):
 
 		def calculate_group_cov():
-			# builds covariance map for each cluster
+			'''
+			Builds covariance map in the form:
+				{loangroup1: {loangroup1: cov(1,1), loangroup2: cov(1,2)}, loangroup2: {etc}}
+			Requires numpy.
+			'''
+			
 			covariances = defaultdict(lambda: defaultdict(int))
 			for k1, v1 in self.cash_flow_dict.iteritems():
 				for k2, v2 in self.cash_flow_dict.iteritems():
@@ -23,7 +28,15 @@ class kMeans():
 
 
 		def contribution_to_month(l, curr_date):
-			# Determines if loan is active during given month/year.
+			'''
+			Determines if loan is active during given month/year. Takes in a loan
+			and a date to compare it against in the form 'Jan-2015'.  
+
+			It extracts the issue date, last payment date, term length, and then 'add_months'
+			to generate what the last payment date should be given there is no default.  So if 
+			last payment date and this projected date do not align, we know we have default so 
+			we are actually losing money in those months.
+			'''
 			def add_months(d, months_to_add):
 				month = d.month - 1 + months_to_add
 				year = int(d.year + month / 12)
@@ -54,8 +67,13 @@ class kMeans():
 			return 0 # loan not active
 
 		def generate_cash_flow_vectors():
+			'''
+			For each cluster: 
+				Creates a vector of cash flows for every month by adding up all of the installments of
+				the loans in group.
+			Returns a map of cluster => cash_flow_vector[] 
+			'''
 			d = defaultdict(list)
-			# cluster => [monthly cash flow]
 			for k, v in self.clusters.iteritems():
 				cash_flow = []
 				for year in YEARS:
@@ -68,11 +86,69 @@ class kMeans():
 				d[k] = cash_flow				
 			return d
 
+		# variance = sum((x/row["funded_amnt"] - expReturn)**2 for x in allReturns)/(len(allReturns)-1)
+		def cluster_variance():
+			def months_paid(l):
+				def add_months(d, months_to_add):
+					month = d.month - 1 + months_to_add
+					year = int(d.year + month / 12)
+					month = month % 12 + 1
+					return date(year, month, 1)
+
+
+				loan_term = int(l[self.columns.index('term')].split()[0])
+				loan_issue_date = l[self.columns.index('issue_d')]
+				loan_last_pymnt_date = l[self.columns.index('last_pymnt_d')]
+				# print loan_issue_date, loan_last_pymnt_date
+				if loan_last_pymnt_date == "None": loan_last_pymnt_date = 'Jun-2016'
+
+				issue_month = MONTHS.index(loan_issue_date[: loan_issue_date.index('-')]) + 1
+				issue_year = int(loan_issue_date[loan_issue_date.index('-') + 1:])
+				issue_date = date(issue_year, issue_month, 1)
+
+				last_month = MONTHS.index(loan_last_pymnt_date[: loan_last_pymnt_date.index('-')]) + 1
+				last_year = int(loan_last_pymnt_date[loan_last_pymnt_date.index('-') + 1:])
+				last_date = date(last_year, last_month, 1)
+				projected_end_date = add_months(issue_date, loan_term)
+
+				if last_date < projected_end_date:
+					return self.db.monthsDifference((last_date.month, last_date.year), (issue_date.month, issue_date.year))
+				return loan_term
+				#return min(loan_term, self.db.monthsDifference((projected_end_date.month, projected_end_date.year),(5, 2016)))
+
+
+
+			# k = zip_code, v = [l1, l2, l7, l10]
+			d = {}
+			for k,v in self.clusters.iteritems():
+				clusterReturns = []
+				total_funded_amt = 0
+				for loan in v:
+					issue_date = self.db.stringToDate(loan[self.columns.index('issue_d')])
+					loan_term = int(loan[self.columns.index('term')].split()[0])
+					loanMonthsCompleted = months_paid(loan)
+					ER = loan[self.columns.index('installment')] * min(loan_term, self.db.monthsDifference((5, 2015), issue_date))
+					total_funded_amt += ER
+					clusterReturns.append(loanMonthsCompleted * loan[self.columns.index('installment')])
+
+				expReturn = (sum(clusterReturns)/total_funded_amt)/len(clusterReturns)
+				if len(clusterReturns) > 1:
+					variance = sum((x/total_funded_amt - expReturn)**2 for x in clusterReturns)/(len(clusterReturns)-1) #-1 for sample
+					d[k] = variance
+			return d
+
+		'''
+		Partitions loans based on first two numbers of zip_code. 
+		Returns map of cluster_id (zip_code) => a vector of all loans assigned.
+		'''
 		def cluster_loans():
 			# clustering by zip_code
 			d = defaultdict(list)
 			for l in self.loans:
 				zip_code = l[self.columns.index('zip_code')]
+				z = list(zip_code)
+				z[2] = 'x'
+				zip_code = "".join(z)
 				if zip_code in d:
 					d[zip_code].append(l)
 				else:                                            
@@ -84,8 +160,14 @@ class kMeans():
 		self.columns = db.getColumnNames(table)
 		self.clusters = cluster_loans()
 		self.cash_flow_dict = generate_cash_flow_vectors()
-		self.covariances = calculate_group_cov()
+		self.cluster_variances = cluster_variance()
+		print len(self.cluster_variances)
+		for k, v in self.cluster_variances.iteritems():
+			print k, v
+		# print self.cluster_variances
+
+		# self.covariances = calculate_group_cov()
 
 
-# db = databaseAccess()
-# kmeans = kMeans(db, "TrainSixty")
+db = databaseAccess()
+kmeans = kMeans(db, "TrainSixty")
