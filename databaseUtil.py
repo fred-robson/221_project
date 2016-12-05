@@ -2,7 +2,9 @@
 import sqlite3 as lite
 import sys,csv,re, random
 import sys,csv
-import random
+import string
+import re
+from tfidf import TFIDF_Extractor
 TABLE = 'loan'
 DB_NAME = 'database.sqlite'
 
@@ -31,6 +33,12 @@ class databaseAccess():
 		self.col_name_list = {t[0]:i for i,t in enumerate(res.description)}
 		self.tables = ["TestThirtySix", "TrainThirtySix", "TestSixty", "TrainSixty"]
 
+	# Extracting loans based on loan_status -- Fully Paid, Charged Off, Current.
+	def extract_loans_with_status(self, status):
+		execute_string = "SELECT * FROM loan WHERE loan_status = '{}' ".format(status)
+		self.cur.execute(execute_string)
+		return self.cur.fetchall()
+
 	def extract_table_loans(self, table_name):
 		execute_string = ("SELECT * FROM {}").format(table_name)
 		self.cur.execute(execute_string)
@@ -45,13 +53,31 @@ class databaseAccess():
 	# Randomly distributes data amongst the test and train data.
 	def partition_data(self, features):
 		def populate_table(table_name, loan_set):
+
+			def clean_html(desc): # eliminates html tags.
+  				cleanr = re.compile('<.*?>')
+  				cleantext = re.sub(cleanr, '', desc)
+  				return cleantext
+
 			for loan in loan_set:
 				query = "INSERT OR IGNORE INTO {} VALUES ({},".format(table_name, loan[0])
 				for k in features.keys():
 					if features[k] in STR_TYPES: query += '\''
-					query += "{}".format(loan[self.col_name_list[k]])
+					if k == 'desc':
+						d = loan[self.col_name_list[k]]
+						if d is None:
+							query += "{}".format(d)
+						else:
+							d = clean_html(d)
+							for char in string.punctuation:
+								d = d.replace(char, ' ')
+							if d is not None: d = d.encode('ascii', 'ignore')
+  						query += "{}".format(d)
+					else:
+						query += "{}".format(loan[self.col_name_list[k]])
 					if features[k] in STR_TYPES: query += '\''
 					query += ","
+
 				query = query[:-1] + ")"
 				self.cur.execute(query)
 				self.con.commit()
@@ -172,12 +198,20 @@ def updateSecondaryTables():
 	flist["loan_status"] = "TEXT"
 	flist["last_pymnt_d"] = "TEXT"
 	flist["funded_amnt"] = "INT"
-	flist["exp_r"] = "FLOAT"
-	flist["var"] = "FLOAT"
-	flist["cluster"] = "INT"
+	flist["desc"] = "TEXT"
+
+	flist2 = {}
+	flist2["exp_r"] = "FLOAT"
+	flist2["var"] = "FLOAT"
+	flist2["cluster"] = "INT"
+	
 	db.update_table_features(flist)
-	# db.partition_data({"total_pymnt": "INT", "funded_amnt": "INT"})
-	#db.add_columns()
+	db.add_columns(flist2)
+
+	tfidf = TFIDF_Extractor(db)
+	# returns array of [0,1] where 0 index is top words for defaulted, 1 is non defaulted.
+	# 	iterate through all loans in each table?
+	# write database method to add a column for each word and stuff.
 
 if __name__ == "__main__":
 	d = databaseAccess()
