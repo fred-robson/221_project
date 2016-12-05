@@ -12,7 +12,7 @@ import random
 
 PICKLE_DIRECTORY = "data/"
 INVESTING_INCREMENT = 1000 #Only allows you to invest in $1000 increments
-NUM_POTENTIAL_LOANS = 1 #The constained sample of loans to examine
+NUM_POTENTIAL_LOANS = 20 #The constained sample of loans to examine
 
 
 class portfolioState():
@@ -21,6 +21,7 @@ class portfolioState():
 		self.portfolio = portfolio 
 		self.cash = cash
 		self.date = date
+
 
 	def strLoans(self):
 		#Prints out the loans as string for easier debugging
@@ -110,9 +111,8 @@ class loanPortfolioMDP(MDP):
 
 		def successorStatesRecursion(currIndex,reward,prob,currPortfolio,allSuccessors):
 			'''
-			Recursively creates all possible combinations of defautl
+			Recursively creates all possible combinations of portfolios caused by default
 			'''
-
 
 			#Base Case - gone through every element in portfolio
 			if currIndex == len(newStateTemplate.portfolio): 
@@ -141,31 +141,63 @@ class loanPortfolioMDP(MDP):
 		successorStatesRecursion(0,0,1.0,[],all_successors)
 		return all_successors
 
-def optimalMdpPortfolio():
-	#Works out the optimal policy and follows that policy according to real world
-	for year in range(2011,2016): 
-		for month in range(1,13):
+class optimalMDPAnalysis():
+	db = databaseAccess()
+
+def actualSuccessor(state,action):
+	'''
+	Returns the successor that we know occured after the fact for any given state
+	@params:
+		- state: current state
+		- action: action taken at that state
+		- return: the succesor state
+	'''
+	#Add the new loan to the portfolio
+	if action!=None:
+		loan,amount = action
+		state.cash-=amount
+		state.portfolio.append((loan,float(amount)/loan['funded_amnt']))
+
+	reward = 0 
+	for loan,amount in state.portfolio:
+		defDate =  optimalMDPAnalysis.db.stringToDate(loan["last_pymnt_d"])
+		if defDate == state.date: 
+			state.portfolio.remove((loan,amount))
+		else: 
+			reward += amount*loan['installment']
+	if state.date[0] is 12: state.date = (1,state.date[1]+1)
+	else: state.date = (state.date[0]+1,state.date[1])
+	return state,reward
+
+
+def optimalMdpPortfolio(startingCash):
+	'''
+	Works out the optimal policy and follows that policy in the real world
+	@params: 
+		- startingCash: how much money you start with
+
+	If it's runnning slowly, constrain INVESTING INCREMENT or numPotential Loans
+	'''
+
+	for year in tqdm(range(2011,2016)): 
+		for month in tqdm(range(1,13)):
 			startDate = (month,year)
 			if year+3>2015: endDate = (12,2015)
 			else: endDate = (month,year+3)
-			mdp = loanPortfolioMDP('TestThirtySix',36,1000,startDate,endDate)
+			mdp = loanPortfolioMDP('TestThirtySix',36,startingCash,startDate,endDate)
 			vi = ValueIteration()
 			vi.solve(mdp,10)
-			loan = None
-			#TODO: this is janky, assumes only one loan picked...
 			state = mdp.startState()
-			while loan == None:
-				loan = vi.pi[state]
-				if state.date[0] is 12: state.date = (1,state.date[1]+1)
-				else: state.date = (state.date[0]+1,state.date[1])
-			loan = loan[0]
-			print loan
-			actual_return = (1000.0/loan['funded_amnt'])*loan['total_pymnt']
-			print actual_return
+			total_reward = 0
+			while state.date!=endDate:
+				action = vi.pi[state]
+				state,reward = actualSuccessor(state,action)
+				total_reward+=reward
+			print startDate,total_reward/startingCash
 			
 
 if __name__ == "__main__":
-	optimalMdpPortfolio()
+	optimalMdpPortfolio(5000)
 	'''
 	mdp = loanPortfolioMDP('TestThirtySix',36,1000,(1,2011),(1,2014))
 	mdp.computeStates()
