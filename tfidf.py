@@ -1,10 +1,6 @@
 import sqlite3 as lite
 import math
 from util.porter import stem
-# from util.textblob import TextBlob, Word, Blobber
-# from util.textblob.classifiers import NaiveBayesClassifier
-# from util.textblob.taggers import NLTKTagger
-# from util.textblob import TextBlob as tb
 import re, string
 
 class TFIDF_Extractor():
@@ -38,8 +34,8 @@ class TFIDF_Extractor():
 			def sanitize_desc(desc):
 				clean_desc = ""
 				for word in desc.split():
-					word = stem(word.lower()) # lowercases word and porter-stemming algorithm.
-					if len(word) >= 4 and word in self.engDict: # makes sure it's valid English.
+					word = stem(word.lower())
+					if len(word) >= 4 and word in self.engDict:
 						clean_desc += word + " "
 				return clean_desc
 
