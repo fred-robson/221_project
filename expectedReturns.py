@@ -14,6 +14,7 @@ from tqdm import tqdm
 import cPickle as pickle
 
 PICKLE_DIRECTORY = "data/"
+TEST_ERROR_DIRECTORY = "data/"
 
 class expectedReturn(mlUtil.gradientDescent):
 
@@ -132,6 +133,29 @@ class expectedReturn(mlUtil.gradientDescent):
 			self.db.updateTableValue(self.testTable,dictRow,"var",var)
 			self.db.con.commit()
 
+	def testError(self):
+		'''
+		Caclulates the test error on the machine learning algorithm. Outputs a csv where one column is chance default
+		and the other is whether it actually defaulted
+		'''
+		try: 
+			self.weights = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"weights.p",'rb'))                 
+		except: 
+			raise 
+		
+		errorFileName = TEST_ERROR_DIRECTORY+str(self.termLength)+'testError.csv'
+		with open(errorFileName,'wb+') as csvfile:
+			csvwriter = csv.writer(csvfile)
+			for monthNum in tqdm(range(1,self.termLength+1),desc="FindingTestError"):
+				trainExamples = self.extractTrainExamples(monthNum)
+				for row in trainExamples: 
+					didDefault = row[0] #1 if defaulted, 0 if didnt default
+					probDefault = mlUtil.dotProduct(self.featureExtractor(row[1]),self.weights[monthNum])
+					csvwriter.writerow([didDefault,probDefault])
+				
+				
+
+
 def testMonteCarlo():
 	term_5 = expectedReturn(5,'test',lambda x: (0,x["features"]))
 	term_5.weights = {x:{"a":0.1,"b":0.2} for x in range(5)}
@@ -139,8 +163,9 @@ def testMonteCarlo():
 	print term_5.calculateSingleExpReturnAndVar(row,1000)
 
 if __name__ == "__main__":
-	e = expectedReturn(36,"TrainThirtySix","TestThirtySix")	
-	e.calculateAllExpReturnAndVar(e.leastSquares,10,0.0001,100,True)
-
 	
 
+	e = expectedReturn(36,"TrainThirtySix","TestThirtySix")	
+	e.testError()
+	#e.calculateAllExpReturnAndVar(e.leastSquares,10,0.0001,100,True)
+	

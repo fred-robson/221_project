@@ -86,14 +86,20 @@ class databaseAccess():
 		self.con.execute(query)
 
 
-	def get_loans_issued_in(self, table, month, term=36):
+	def get_loans_issued_in(self, table, month, use_term = False, term=36):
 		'''
 		Returns a list of all the loans issued in @month
 		@params: 
+			table: the table to access info from
 			month: The month the loan was issued in eg "Mar-2011"
+			use_term: if you want to filter on term or not
+			term: if you do filter on term, which terms to return
 			return: a list of tuples, where each tuple is a single loan
 		'''
-		execute_string = ("SELECT * FROM {} WHERE issue_d = '{}' AND term = ' {} months'").format(table,month,term)
+		if use_term: #If table has both terms 
+			execute_string = ("SELECT * FROM {} WHERE issue_d = '{}' AND term = ' {} months'").format(table,month,term)
+		else:
+			execute_string = ("SELECT * FROM {} WHERE issue_d = '{}'").format(table,month)
 		self.cur.execute(execute_string)
 		return self.cur.fetchall()
 
@@ -111,6 +117,12 @@ class databaseAccess():
 				  "Jul":7,"Aug":8,"Sep":9,"Oct":10,"Nov":11,"Dec":12}
 		m,y = dateString.split("-")
 		return monthsInt[m],int(y)
+
+	def dateToString(self,date):
+		#Converts a (month,year) tuple back to string
+		month,year = date
+		monthsInt = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+		return monthsInt[month-1]+'-'+str(year)
 
 	@staticmethod
 	def monthsDifference(t1,t2):

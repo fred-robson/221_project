@@ -1,14 +1,19 @@
 #Class that allows you to calculate the optimal portfolio
 import util.machineLearningUtil as mlUtil
-import sys
+import sys,csv
+import databaseUtil as dbUtil
+from tqdm import tqdm
+from baseline import Baseline
+from oracle import oracle
+
 class optimalPortfolio():
 
 	def __init__(self, possibleLoans, covariances, riskFreeReturn):
 		'''	
 		Initializes a portfolio
 		@params: 
-			- possibleLoans: dictionary of the form {loan_id: {expR:1.3, var:1.2 , loanGroup: 1,....}}
-			- covariances: {loanGroup1:{loanGroup1: cov(1,1), loanGroup1: cov(1,2)....}, loanGroup2:...}
+			- possibleLoans: dictionary of the form {loan_id: {exp_r:1.3, var:1.2 , cluster: 1,....}}
+			- covariances: {cluster1:{cluster1: cov(1,1), cluster1: cov(1,2)....}, cluster2:...}
 			- riskFreeReturn: %return of risk free bonds
 		
 		'''
@@ -19,7 +24,7 @@ class optimalPortfolio():
 
 	def expectedReturn(self): 
 		#Calculates the expected return of the portfolio using the current weights
-		return sum(self.weights[l]*lInfo["expR"] for l,lInfo in self.possibleLoans.iteritems())
+		return sum(self.weights[l]*lInfo["exp_r"] for l,lInfo in self.possibleLoans.iteritems())
 		
 	def portfolioVariance(self): 
 		#Calculates the variance of the portfolio using the current weights
@@ -28,7 +33,7 @@ class optimalPortfolio():
 		for li, liInfo in self.possibleLoans.iteritems():
 			for lj, ljInfo in self.possibleLoans.iteritems():
 				#Variances have already been included in from_var
-				if(li!=lj): from_covar+=self.weights[li]*self.weights[lj]*self.covariances[liInfo["loanGroup"]][ljInfo["loanGroup"]]
+				if(li!=lj): from_covar+=self.weights[li]*self.weights[lj]*self.covariances[liInfo["cluster"]][ljInfo["cluster"]]
 		return from_var+from_covar
 
 	def sharpesRatio(self):
@@ -46,11 +51,11 @@ class optimalPortfolio():
 		sd = var**(1.0/2)
 		grad = {}
 		for li, liInfo in self.possibleLoans.iteritems():
-			ri = liInfo["expR"]
+			ri = liInfo["exp_r"]
 			sumWeightCov = 0
 			for lj,ljInfo in self.possibleLoans.iteritems():
 				if(lj==li): cov =liInfo["var"]
-				else: cov = self.covariances[liInfo["loanGroup"]][ljInfo["loanGroup"]]
+				else: cov = self.covariances[liInfo["cluster"]][ljInfo["cluster"]]
 				sumWeightCov+=self.weights[lj]*cov
 		
 			grad[li] = ri/sd - (sumWeightCov*(expectedReturn-self.riskFreeReturn))/(sd**3)		
@@ -74,14 +79,36 @@ class optimalPortfolio():
 			- numIters: number of iterations for gradient descent
 			- eta: the step size
 		'''
-		for step in range(numIters):
+		for step in tqdm(range(numIters),desc="Finding Optimal Portfolio"):
 			grad = self.sharpesRatioGradient()
 			updatedWeights = {li: self.weights[li] + (eta * grad[li])  for li in self.weights}
 			self.weights = updatedWeights
 			self.normalizeWeights()
 
+	def calculateActualReturn(self):
+		#Calculates the actual return on the loan portfolio
+		totalReturn = 0
+		for l,lInfo in self.possibleLoans.iteritems():
+			totalReturn+=self.weights[l]*(lInfo["total_pymnt"]/lInfo["funded_amnt"])
+		return totalReturn
+
+def getLoansFromTable(table,month):
+	db = dbUtil.databaseAccess() 
+	columnNames = db.getColumnNames(table)
+	def dictRow(row, columnNames):
+		#Converts a row from sql from a list to a dict
+		return {c:r for c,r in zip(columnNames,row)}
+	return_dict = {} 
+	for l in db.get_loans_issued_in(table,month):
+		l = dictRow(l,columnNames)
+		l["cluster"] = 1
+		return_dict[l["id"]] = l
+	return return_dict
+
+		
+
 def test(): 
-	possibleLoans = {1:{"expR":1,"var":1,"loanGroup":1},2:{"expR":10,"var":2,"loanGroup":1}}
+	possibleLoans = {1:{"expR":1,"var":1,"cluster":1},2:{"expR":10,"var":2,"cluster":1}}
 	covariances = {1:{1:-0.02}}
 	p1 = optimalPortfolio(possibleLoans,covariances,0) 
 	p1.weights = {1:5000,2:50000}
@@ -89,8 +116,26 @@ def test():
 	print p1.weights
 
 
+
+
 if __name__ == "__main__":
-	test()
+	covariances = {1:{1:0.1}}
+	with open("results.csv","wb") as csvfile:
+		writer = csv.writer(csvfile,delimiter=",")
+		for year in ["2011","2012","2013","2014","2015"]:
+			for month in ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]: 
+				date = "{}-{}".format(month,year)
+				b = Baseline("TestThirtySix",date)
+				possLoans = getLoansFromTable("TestThirtySix",date)
+				p = optimalPortfolio(possLoans,covariances,0)	
+				p.findOptimalPortfolio(10,0.01)
+				o = oracle(date,"TestThirtySix")
+				portfolio = o.choose_best_portfolio(1)
+				row = (date, b.percentReturn(),p.calculateActualReturn(),oracle.average_return(portfolio),p.expectedReturn())
+				print row
+				writer.writerow(row)
+		
+			
 
 
 

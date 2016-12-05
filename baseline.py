@@ -24,11 +24,12 @@ class Baseline():
 		return sum(map(lambda l : (l[total_pymnt] / l[funded_amnt]) / numLoans, self.loans))
 		# return totalPayments / totalFunded
 
-for year in ["2011","2012","2013","2014","2015"]:
-	for month in ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]: 
-		date = "{}-{}".format(month,year)
-		b = Baseline("TestThirtySix",date)
-		print date, b.percentReturn()
+if __name__ == "__main__":
+	for year in ["2011","2012","2013","2014","2015"]:
+		for month in ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]: 
+			date = "{}-{}".format(month,year)
+			b = Baseline("TestThirtySix",date)
+			print date, b.percentReturn()
 
 
 

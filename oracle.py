@@ -57,6 +57,6 @@ if __name__ == "__main__":
 		for month in ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]: 
 			date = "{}-{}".format(month,year)
 			o = oracle(date,"TestThirtySix")
-			portfolio = o.choose_best_portfolio(10000000)
+			portfolio = o.choose_best_portfolio(5000000)
 			print date,oracle.average_return(portfolio)
 

@@ -12,7 +12,7 @@ class kMeans():
 		def calculate_group_cov():
 			# builds covariance map for each cluster
 			covariances = defaultdict(lambda: defaultdict(int))
-			for k1, v1 in self.cash_flow_dict.iteritems():
+			for k1, v1 in tqdm(self.cash_flow_dict.iteritems(),total=len(self.cash_flow_dict)):
 				for k2, v2 in self.cash_flow_dict.iteritems():
 					cov = numpy.cov(numpy.vstack((v1, v2)))
 					covariances[k1][k1] = cov[0][0]
@@ -83,5 +83,5 @@ class kMeans():
 		self.cash_flow_dict = generate_cash_flow_vectors()
 		self.covariances = calculate_group_cov()
 
-# db = databaseAccess()
-# kmeans = kMeans(db, "TrainSixty")
+db = databaseAccess()
+kmeans = kMeans(db, "TrainSixty")
