@@ -21,14 +21,26 @@ class TFIDF_Extractor():
 		return self.tf(word, doc) * self.idf(word, doclist)
 
 	def __init__(self, db):
+		'''
+		Class for TF-IDF Analysis. Handles basic text sanitization across all loans.
+		Creates two documents -- one for defaulted loan descriptions and one for non-defaulted
+		and current loan descriptions.
+		'''
+
 		def compileDescriptions(loan_set):
+		'''
+		Iterates through descriptions of each loan in set, sanitizes, then compiles into a single
+		document intended for tfidf analysis. 
+
+		Sanitization includes stripping of html tags, non English words, standardizing capitalization and word length.
+		Return: result_document (Compiled Loan Descriptions)
+		'''
 			def sanitize_desc(desc):
-				# takes each word in description, lower cases it, makes sure it's english, removes punctuation
 				clean_desc = ""
 				for word in desc.split():
 					word = stem(word.lower()) # lowercases word and porter-stemming algorithm.
 					if len(word) >= 4 and word in self.engDict: # makes sure it's valid English.
-						clean_desc += word + " "# .translate(None, string.punctuation) # removes punctuation.
+						clean_desc += word + " "
 				return clean_desc
 
 			result_document = ""
@@ -42,23 +54,19 @@ class TFIDF_Extractor():
 		with open("engDict.txt", "r") as f:
 			self.engDict = {line.strip() for line in f}
 
-		# extract all loans that have defaulted.
-		# extract all loans that have not defaulted.
-		# compile descriptions for each.
-
-		defaulted_loans = self.db.extract_loans_with_status("Charged Off") + self.db.extract_loans_with_status("Current")
-		nondefaulted_loans = self.db.extract_loans_with_status("Fully Paid")
+		defaulted_loans = self.db.extract_loans_with_status("Charged Off")
+		nondefaulted_loans = self.db.extract_loans_with_status("Fully Paid") + self.db.extract_loans_with_status("Current")
 		documentList = [compileDescriptions(defaulted_loans), compileDescriptions(nondefaulted_loans)]
 
-		
-		# run tf-idf on each set.
-		# extract top K words from each set and add new column for each one.
+		'''
+		Computes the TF-IDF score for each word in each document. 
+		TF-IDF Class returns an array where array[0] is an array of the top scoring words
+		for defaulted loans and array[1] is an array of top scoring words for nondefaulting loans.
+		'''
 		tfidf_scores = []
-		# feature_words = {}
 		wordToScoreCache = {}
 		for i in range(len(documentList)):
 			print("Top words in document {}".format(i + 1))
-			print len(documentList[i].split())
 			scores = {}
 			for word in documentList[i].split():
 				if word not in wordToScoreCache:
@@ -69,10 +77,7 @@ class TFIDF_Extractor():
 			# scores = {word: self.tfidf(word, documentList[i], documentList) for word in documentList[i].split()}
 			sorted_words = sorted(scores.items(), key=lambda x: x[1], reverse=True)
 			for word, score in sorted_words[:20]:
-				# feature_words[word] = "INT"
 				print("\tWord: {}, TF-IDF: {}".format(word, round(score, 5)))
 			tfidf_scores += sorted_words
-		# self.db.add_columns(feature_words)
 		return tfidf_scores
-# tfidf = TFIDF_Extractor()
 
