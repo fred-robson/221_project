@@ -1,8 +1,12 @@
 #Series of classes/functions for accesing the database
 import sqlite3 as lite
 import sys,csv,re, random
+import sys,csv
+import random
+TABLE = 'loan'
+DB_NAME = 'database.sqlite'
 
-DB_NAME = 'data/database.sqlite'
+
 STR_TYPES = ['CHARACTER(20)', 'VARCHAR(255)', 'VARYING CHARACTER(255)', 'NCHAR(55)', 'NATIVE CHARACTER(70)', 'NVARCHAR(100)', 'TEXT']
 def set_up_db():
 	'''
@@ -27,6 +31,11 @@ class databaseAccess():
 		self.col_name_list = {t[0]:i for i,t in enumerate(res.description)}
 		self.tables = ["TestThirtySix", "TrainThirtySix", "TestSixty", "TrainSixty"]
 
+	def extract_table_loans(self, table_name):
+		execute_string = ("SELECT * FROM {}").format(table_name)
+		self.cur.execute(execute_string)
+		return self.cur.fetchall()
+
 	# Extracting loans based on term -- 36 or 60.
 	def extract_term_loans(self, term,table):
 		execute_string = ("SELECT * FROM {} WHERE term = ' {} months'").format(table,term)
@@ -46,6 +55,7 @@ class databaseAccess():
 				query = query[:-1] + ")"
 				self.cur.execute(query)
 				self.con.commit()
+
 
 		loans = self.extract_term_loans(36,"loan")
 		n = len(loans) / 2
@@ -103,6 +113,7 @@ class databaseAccess():
 		self.cur.execute(execute_string)
 		return self.cur.fetchall()
 
+
 	def getColumnNames(self,table):
 		#Matches the name of every column to its column number 
 		res = self.con.execute(("select * from {}").format(table))
@@ -151,6 +162,7 @@ def updateSecondaryTables():
 	flist = {}
 	flist["issue_d"] = "VARCHAR(255)"
 	flist["total_pymnt"] = "INT"
+	flist["zip_code"] = "TEXT"
 	flist["installment"] = "FLOAT"
 	flist["grade"] = "TEXT"
 	flist["sub_grade"] = "TEXT"
@@ -170,3 +182,4 @@ def updateSecondaryTables():
 if __name__ == "__main__":
 	d = databaseAccess()
 	print databaseAccess.subgradeToInt("G5")
+
