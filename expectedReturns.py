@@ -5,6 +5,8 @@ variance of that loan. It does so by:
 	- Using the risk of default to run multiple monte carlo simulations, thereby learning the 
 	  expected return and the variance of the return
 '''
+DESC_WORDS = ["credit", "lower", "payment", "month", "interest", "bills", "thank", "current", "start", \
+"person", "medic", "higher", "great", "always", "about", "business", "card", "never", "other", "lower"]
 
 import collections,random, csv
 import util.machineLearningUtil as mlUtil
@@ -60,7 +62,10 @@ class expectedReturn(mlUtil.gradientDescent):
 		'''
 		gradeInt = dbUtil.databaseAccess.subgradeToInt(dictRow["sub_grade"]) 
 		empLength = dbUtil.databaseAccess.numYearsEmployedToInt(dictRow["emp_length"])
-		return {"dti":dictRow["dti"],"grade":gradeInt,"emp_length":empLength}
+		features = {"dti":dictRow["dti"],"grade":gradeInt,"emp_length":empLength}
+		for word in DESC_WORDS:
+			features[word] = dictRow[word]
+		return features
 
 		
 	def learnWeights(self,updateWeights,numIters,eta):
@@ -166,6 +171,7 @@ if __name__ == "__main__":
 	
 
 	e = expectedReturn(36,"TrainThirtySix","TestThirtySix")	
+	e.learnWeights(, 10, 0.01)
 	e.testError()
 	#e.calculateAllExpReturnAndVar(e.leastSquares,10,0.0001,100,True)
 	

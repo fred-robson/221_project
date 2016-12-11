@@ -8,7 +8,8 @@ from tfidf import TFIDF_Extractor
 TABLE = 'loan'
 DB_NAME = 'database.sqlite'
 
-
+DESC_WORDS = ["credit", "lower", "payment", "month", "interest", "bills", "thank", "current", "start", \
+"person", "medic", "higher", "great", "always", "about", "business", "card", "never", "other", "lower"]
 STR_TYPES = ['CHARACTER(20)', 'VARCHAR(255)', 'VARYING CHARACTER(255)', 'NCHAR(55)', 'NATIVE CHARACTER(70)', 'NVARCHAR(100)', 'TEXT']
 def set_up_db():
 	'''
@@ -73,11 +74,16 @@ class databaseAccess():
 								d = d.replace(char, ' ')
 							if d is not None: d = d.encode('ascii', 'ignore')
   						query += "{}".format(d)
+					elif k in DESC_WORDS:
+						d = loan[self.col_name_list['desc']]
+						if not d or k not in d:
+							query += "0"
+						else:
+							query += "1"  
 					else:
 						query += "{}".format(loan[self.col_name_list[k]])
 					if features[k] in STR_TYPES: query += '\''
 					query += ","
-
 				query = query[:-1] + ")"
 				self.cur.execute(query)
 				self.con.commit()
@@ -197,23 +203,25 @@ def updateSecondaryTables():
 	flist["dti"] = "FLOAT"
 	flist["loan_status"] = "TEXT"
 	flist["last_pymnt_d"] = "TEXT"
+	flist["last_pymnt_amnt"] = "FLOAT"
 	flist["funded_amnt"] = "INT"
 	flist["desc"] = "TEXT"
+	flist["term"] = "TEXT"
 
 	flist2 = {}
 	flist2["exp_r"] = "FLOAT"
 	flist2["var"] = "FLOAT"
 	flist2["cluster"] = "INT"
-	
+
+	for i in range(20):
+		flist[DESC_WORDS[i]] = "INT"
+
 	db.update_table_features(flist)
 	db.add_columns(flist2)
 
-	tfidf = TFIDF_Extractor(db)
-	# returns array of [0,1] where 0 index is top words for defaulted, 1 is non defaulted.
-	# 	iterate through all loans in each table?
-	# write database method to add a column for each word and stuff.
 
 if __name__ == "__main__":
 	d = databaseAccess()
+	# updateSecondaryTables()
 	print databaseAccess.subgradeToInt("G5")
 
