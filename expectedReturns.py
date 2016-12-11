@@ -171,7 +171,6 @@ if __name__ == "__main__":
 	
 
 	e = expectedReturn(36,"TrainThirtySix","TestThirtySix")	
-	e.learnWeights(, 10, 0.01)
 	e.testError()
 	#e.calculateAllExpReturnAndVar(e.leastSquares,10,0.0001,100,True)
 	
