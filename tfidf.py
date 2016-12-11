@@ -65,7 +65,6 @@ class TFIDF_Extractor():
 
 		defaulted_loans = self.db.extract_loans_with_status("Charged Off")
 		nondefaulted_loans = self.db.extract_loans_with_status("Fully Paid") + self.db.extract_loans_with_status("Current")
-		print len(defaulted_loans)
 		# documentList = [compileDescriptions(defaulted_loans), compileDescriptions(nondefaulted_loans)]
 		defaultDocList = compileDescriptions(defaulted_loans)
 		nonDefaultDocList = compileDescriptions(nondefaulted_loans)
