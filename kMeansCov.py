@@ -1,8 +1,9 @@
 from databaseUtil import databaseAccess
 from collections import defaultdict
 from datetime import date
+import cPickle as pickle
 import numpy
-
+PICKLE_DIRECTORY = "data/"
 YEARS = ["2011","2012","2013","2014","2015"]
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 
@@ -17,9 +18,11 @@ class kMeans():
 			'''
 			
 			covariances = defaultdict(lambda: defaultdict(int))
-			for k1, v1 in tqdm(self.cash_flow_dict.iteritems(),total=len(self.cash_flow_dict)):
+			# for k1, v1 in tqdm(self.cash_flow_dict.iteritems(),total=len(self.cash_flow_dict)):
+			for k1, v1 in self.cash_flow_dict.iteritems():
 				for k2, v2 in self.cash_flow_dict.iteritems():
 					cov = numpy.cov(numpy.vstack((v1, v2)))
+					print cov
 					covariances[k1][k1] = cov[0][0]
 					covariances[k1][k2] = cov[0][1] 
 					covariances [k2][k1] = cov[1][0]
@@ -114,11 +117,7 @@ class kMeans():
 				if last_date < projected_end_date:
 					return self.db.monthsDifference((last_date.month, last_date.year), (issue_date.month, issue_date.year))
 				return loan_term
-				#return min(loan_term, self.db.monthsDifference((projected_end_date.month, projected_end_date.year),(5, 2016)))
 
-
-
-			# k = zip_code, v = [l1, l2, l7, l10]
 			d = {}
 			for k,v in self.clusters.iteritems():
 				clusterReturns = []
@@ -155,18 +154,24 @@ class kMeans():
 					d[zip_code] = [l]
 			return d
 
+		def extract_term_length(table):
+			if table.find("Sixty") > -1:
+				return 60
+			else:
+				return 36
+
 		self.db = db
 		self.loans = db.extract_table_loans(table)
+		print len(self.loans)
 		self.columns = db.getColumnNames(table)
 		self.clusters = cluster_loans()
 		self.cash_flow_dict = generate_cash_flow_vectors()
 		self.cluster_variances = cluster_variance()
-		print len(self.cluster_variances)
-		for k, v in self.cluster_variances.iteritems():
-			print k, v
-		# print self.cluster_variances
+		self.termLength = extract_term_length(table)
+		self.covariances = calculate_group_cov()
+		pickle.dump(self.covariances, open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p","wb"))
 
-		# self.covariances = calculate_group_cov()
+
 
 
 db = databaseAccess()

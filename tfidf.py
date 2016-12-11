@@ -24,26 +24,39 @@ class TFIDF_Extractor():
 		'''
 
 		def compileDescriptions(loan_set):
-		'''
-		Iterates through descriptions of each loan in set, sanitizes, then compiles into a single
-		document intended for tfidf analysis. 
-
-		Sanitization includes stripping of html tags, non English words, standardizing capitalization and word length.
-		Return: result_document (Compiled Loan Descriptions)
-		'''
 			def sanitize_desc(desc):
 				clean_desc = ""
 				for word in desc.split():
 					word = stem(word.lower())
-					if len(word) >= 4 and word in self.engDict:
+					if len(word) >= 5 and word in self.engDict:
 						clean_desc += word + " "
 				return clean_desc
 
-			result_document = ""
+			doc_arr = []
+			doc_string = ""
 			for loan in loan_set:
 				description = loan[self.columns.index('desc')]
-				if description != None: result_document += sanitize_desc(description) + " "
-			return result_document
+				if description != None: 
+					d = sanitize_desc(description)
+					doc_arr.append(d)
+					doc_string += d + " "
+			return (doc_arr, doc_string)
+
+		def computeScores(docArr, docString):
+			'''
+			Computes the TF-IDF score for each word in each document. 
+			TF-IDF Class returns an array where array[0] is an array of the top scoring words
+			for defaulted loans and array[1] is an array of top scoring words for nondefaulting loans.
+			'''
+			
+			scores = {}
+			for word in docString.split():
+				if word not in scores:
+					scores[word] = self.tfidf(word, docString, docArr)
+			sorted_words = sorted(scores.items(), key=lambda x: x[1], reverse = True)
+			for word, score in sorted_words[:20]:
+				print("\tWord: {}, TF-IDF: {}".format(word, round(score, 5)))
+			return sorted_words
 
 		self.db = db
 		self.columns = self.db.getColumnNames("loan")
@@ -52,28 +65,11 @@ class TFIDF_Extractor():
 
 		defaulted_loans = self.db.extract_loans_with_status("Charged Off")
 		nondefaulted_loans = self.db.extract_loans_with_status("Fully Paid") + self.db.extract_loans_with_status("Current")
-		documentList = [compileDescriptions(defaulted_loans), compileDescriptions(nondefaulted_loans)]
+		# documentList = [compileDescriptions(defaulted_loans), compileDescriptions(nondefaulted_loans)]
+		defaultDocList = compileDescriptions(defaulted_loans)
+		nonDefaultDocList = compileDescriptions(nondefaulted_loans)
+		self.defaultWords = computeScores(defaultDocList[0], defaultDocList[1] + nonDefaultDocList[1])
+		self.nondefaultWords = computeScores(nonDefaultDocList[0], nonDefaultDocList[1] + defaultDocList[1])
 
-		'''
-		Computes the TF-IDF score for each word in each document. 
-		TF-IDF Class returns an array where array[0] is an array of the top scoring words
-		for defaulted loans and array[1] is an array of top scoring words for nondefaulting loans.
-		'''
-		tfidf_scores = []
-		wordToScoreCache = {}
-		for i in range(len(documentList)):
-			print("Top words in document {}".format(i + 1))
-			scores = {}
-			for word in documentList[i].split():
-				if word not in wordToScoreCache:
-					scores[word] = self.tfidf(word, documentList[i], documentList)
-					wordToScoreCache[word] = scores[word]
-				else:
-					scores[word] = wordToScoreCache[word]
-			# scores = {word: self.tfidf(word, documentList[i], documentList) for word in documentList[i].split()}
-			sorted_words = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-			for word, score in sorted_words[:20]:
-				print("\tWord: {}, TF-IDF: {}".format(word, round(score, 5)))
-			tfidf_scores += sorted_words
-		return tfidf_scores
+		
 
