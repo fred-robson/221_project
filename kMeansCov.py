@@ -162,7 +162,6 @@ class kMeans():
 
 		self.db = db
 		self.loans = db.extract_table_loans(table)
-		print len(self.loans)
 		self.columns = db.getColumnNames(table)
 		self.clusters = cluster_loans()
 		self.cash_flow_dict = generate_cash_flow_vectors()
