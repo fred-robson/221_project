@@ -5,7 +5,10 @@ Lending Club is an online peer-to-peer lending platform, matching borrowers and 
 
 ##Steps to run:
 
-(i) Download dataset from kaggle: https://www.kaggle.com/wendykan/lending-club-loan-data
+(i) Download dataset from kaggle:
+
+\- https://www.kaggle.com/wendykan/lending-club-loan-data
+
 (ii) Set up virtual environment:
   
  \- $source venv/bin/activate
