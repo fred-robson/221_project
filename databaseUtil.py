@@ -212,37 +212,34 @@ def setUpDatabase():
 			db.cur.execute(query)
 
 	db = databaseAccess()
-	#List of columns that will be copied from test/train 
-	columnsToCopy = {
-			 		 "issue_d":"VARCHAR(255)",
-					 "total_pymnt" : "INT",
-					 "zip_code": "TEXT",
-					 "installment":"FLOAT",
-					 "grade": "TEXT",
-					 "sub_grade" :"TEXT",
-					 "emp_length":"TEXT",
-					 "home_ownership":"TEXT",
-					 "dti":"FLOAT",
-					 "loan_status":"TEXT",
-					 "last_pymnt_d":"TEXT",
-					 "last_pymnt_amnt":"FLOAT",
-					 "funded_amnt":"INT",
-					 "desc":"TEXT",
-					 "term":"TEXT",
+	flist = {}
+	flist["issue_d"] = "VARCHAR(255)"
+	flist["total_pymnt"] = "INT"
+	flist["zip_code"] = "TEXT"
+	flist["installment"] = "FLOAT"
+	flist["grade"] = "TEXT"
+	flist["sub_grade"] = "TEXT"
+	flist["emp_length"] = "TEXT"
+	flist["home_ownership"] = "TEXT"
+	flist["dti"] = "FLOAT"
+	flist["loan_status"] = "TEXT"
+	flist["last_pymnt_d"] = "TEXT"
+	flist["last_pymnt_amnt"] = "FLOAT"
+	flist["funded_amnt"] = "INT"
+	flist["desc"] = "TEXT"
+	flist["term"] = "TEXT"
+	flist["purpose"] = "TEXT"
 
-			 		}
-	for d in DESC_WORDS: columnsToCopy[d] = "TEXT"
-			 		#List of columns 
-	columnsToCreate = { "exp_r":"FLOAT",
-						"var": "FLOAT",
-						"cluster":"INT"
-					  }
+	for i in range(20):
+		flist[DESC_WORDS[i]] = "INT"
 
-	db.update_table_features(columnsToCopy)
-	db.add_columns(columnsToCreate)
-	print "Database Set Up Complete! \n"
+	flist2 = {}
+	flist2["exp_r"] = "FLOAT"
+	flist2["var"] = "FLOAT"
+	flist2["cluster"] = "INT"
 
-	
+	db.update_table_features(flist)
+	db.add_columns(flist2)
 
 	
 
