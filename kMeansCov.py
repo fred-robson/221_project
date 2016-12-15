@@ -166,7 +166,6 @@ class kMeans():
 
 		self.db = db
 		self.termLength = extract_term_length(table)
-		print usePickle
 		if usePickle:
 			self.covariances = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p",'rb'))
 		else:
