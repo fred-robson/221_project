@@ -8,7 +8,7 @@ YEARS = ["2011","2012","2013","2014","2015"]
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 
 class kMeans():
-	def __init__(self, db, table):
+	def __init__(self, db, table, usePickle=True):
 
 		def calculate_group_cov():
 			'''
@@ -16,12 +16,17 @@ class kMeans():
 				{loangroup1: {loangroup1: cov(1,1), loangroup2: cov(1,2)}, loangroup2: {etc}}
 			Requires numpy.
 			'''
-			
-			covariances = defaultdict(lambda: defaultdict(int))
-			# for k1, v1 in tqdm(self.cash_flow_dict.iteritems(),total=len(self.cash_flow_dict)):
-			for k1, v1 in self.cash_flow_dict.iteritems():
-				for k2, v2 in self.cash_flow_dict.iteritems():
-					cov = numpy.cov(numpy.vstack((v1, v2)))
+			covariances = {}
+			for k, v in self.cluster_variances.iteritems():
+				covariances[k] = {}
+			# covariances = defaultdict(lambda: defaultdict(int))
+
+			# for k1, v1 in tqdm(self.cluster_variances.iteritems(),total=len(self.cluster_variances)):
+			for k1, v1 in self.cluster_variances.iteritems():
+				for k2, v2 in self.cluster_variances.iteritems():
+					# print k1, k2
+					print v1, v2
+					cov = numpy.cov(v1, v2)
 					print cov
 					covariances[k1][k1] = cov[0][0]
 					covariances[k1][k2] = cov[0][1] 
@@ -85,7 +90,6 @@ class kMeans():
 						for loan in v:
 							monthly_cash_flow += contribution_to_month(loan, date(int(year), month, 1)) # if contributing to monthly cash flow.
 						cash_flow.append(monthly_cash_flow)
-
 				d[k] = cash_flow				
 			return d
 
@@ -126,8 +130,7 @@ class kMeans():
 					issue_date = self.db.stringToDate(loan[self.columns.index('issue_d')])
 					loan_term = int(loan[self.columns.index('term')].split()[0])
 					loanMonthsCompleted = months_paid(loan)
-					ER = loan[self.columns.index('installment')] * min(loan_term, self.db.monthsDifference((5, 2015), issue_date))
-					total_funded_amt += ER
+					total_funded_amt += loan[self.columns.index('installment')] * min(loan_term, self.db.monthsDifference((5, 2015), issue_date))
 					clusterReturns.append(loanMonthsCompleted * loan[self.columns.index('installment')])
 
 				expReturn = (sum(clusterReturns)/total_funded_amt)/len(clusterReturns)
@@ -152,6 +155,7 @@ class kMeans():
 					d[zip_code].append(l)
 				else:                                            
 					d[zip_code] = [l]
+
 			return d
 
 		def extract_term_length(table):
@@ -161,17 +165,19 @@ class kMeans():
 				return 36
 
 		self.db = db
-		self.loans = db.extract_table_loans(table)
-		self.columns = db.getColumnNames(table)
-		self.clusters = cluster_loans()
-		self.cash_flow_dict = generate_cash_flow_vectors()
-		self.cluster_variances = cluster_variance()
 		self.termLength = extract_term_length(table)
-		self.covariances = calculate_group_cov()
-		pickle.dump(self.covariances, open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p","wb"))
-
-
-
+		if usePickle:
+			self.covariances = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p",'rb'))
+		else:
+			self.loans = db.extract_table_loans(table)
+			self.columns = db.getColumnNames(table)
+			self.clusters = cluster_loans(100, 800)
+			# self.cash_flow_dict = generate_cash_flow_vectors()
+			self.cluster_variances = cluster_variance()
+			self.covariances = calculate_group_cov()
+			pickle.dump(self.covariances, open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p","wb"))
 
 db = databaseAccess()
-kmeans = kMeans(db, "TrainSixty")
+kmeans = kMeans(db, "TrainSixty", False)
+
+

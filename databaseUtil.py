@@ -207,14 +207,15 @@ def updateSecondaryTables():
 	flist["funded_amnt"] = "INT"
 	flist["desc"] = "TEXT"
 	flist["term"] = "TEXT"
+	flist["purpose"] = "TEXT"
+
+	for i in range(20):
+		flist[DESC_WORDS[i]] = "INT"
 
 	flist2 = {}
 	flist2["exp_r"] = "FLOAT"
 	flist2["var"] = "FLOAT"
 	flist2["cluster"] = "INT"
-
-	for i in range(20):
-		flist[DESC_WORDS[i]] = "INT"
 
 	db.update_table_features(flist)
 	db.add_columns(flist2)
