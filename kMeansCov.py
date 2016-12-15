@@ -171,7 +171,7 @@ class kMeans():
 		else:
 			self.loans = db.extract_table_loans(table)
 			self.columns = db.getColumnNames(table)
-			self.clusters = cluster_loans(100, 800)
+			self.clusters = cluster_loans()
 			# self.cash_flow_dict = generate_cash_flow_vectors()
 			self.cluster_variances = cluster_variance()
 			self.covariances = calculate_group_cov()
