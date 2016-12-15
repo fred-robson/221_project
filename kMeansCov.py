@@ -174,15 +174,12 @@ class kMeans():
 			self.covariances = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p",'rb'))
 		else:
 			self.loans = db.extract_table_loans(table)
-			categories = []
-			for l in self.loans:
-
-			# self.columns = db.getColumnNames(table)
-			# self.clusters = cluster_loans(100, 800)
-			# # self.cash_flow_dict = generate_cash_flow_vectors()
-			# self.cluster_variances = cluster_variance()
-			# self.covariances = calculate_group_cov()
-			# pickle.dump(self.covariances, open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p","wb"))
+			self.columns = db.getColumnNames(table)
+			self.clusters = cluster_loans(100, 800)
+			# self.cash_flow_dict = generate_cash_flow_vectors()
+			self.cluster_variances = cluster_variance()
+			self.covariances = calculate_group_cov()
+			pickle.dump(self.covariances, open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p","wb"))
 
 db = databaseAccess()
 kmeans = kMeans(db, "TrainSixty", False)
