@@ -2,11 +2,16 @@
 import sqlite3 as lite
 import sys,csv,re, random
 import sys,csv
-import random
+import string
+import re
+from tfidf import TFIDF_Extractor
+from tqdm import tqdm
+
 TABLE = 'loan'
 DB_NAME = 'database.sqlite'
 
-
+DESC_WORDS = ["credit", "lower", "payment", "month", "interest", "bills", "thank", "current", "start", \
+"person", "medic", "higher", "great", "always", "about", "business", "card", "never", "other", "lower"]
 STR_TYPES = ['CHARACTER(20)', 'VARCHAR(255)', 'VARYING CHARACTER(255)', 'NCHAR(55)', 'NATIVE CHARACTER(70)', 'NVARCHAR(100)', 'TEXT']
 def set_up_db():
 	'''
@@ -31,6 +36,12 @@ class databaseAccess():
 		self.col_name_list = {t[0]:i for i,t in enumerate(res.description)}
 		self.tables = ["TestThirtySix", "TrainThirtySix", "TestSixty", "TrainSixty"]
 
+	# Extracting loans based on loan_status -- Fully Paid, Charged Off, Current.
+	def extract_loans_with_status(self, status):
+		execute_string = "SELECT * FROM loan WHERE loan_status = '{}' ".format(status)
+		self.cur.execute(execute_string)
+		return self.cur.fetchall()
+
 	def extract_table_loans(self, table_name):
 		execute_string = ("SELECT * FROM {}").format(table_name)
 		self.cur.execute(execute_string)
@@ -45,11 +56,34 @@ class databaseAccess():
 	# Randomly distributes data amongst the test and train data.
 	def partition_data(self, features):
 		def populate_table(table_name, loan_set):
-			for loan in loan_set:
+
+			def clean_html(desc): # eliminates html tags.
+  				cleanr = re.compile('<.*?>')
+  				cleantext = re.sub(cleanr, '', desc)
+  				return cleantext
+
+			for loan in tqdm(loan_set, desc="Copying Loans"):
 				query = "INSERT OR IGNORE INTO {} VALUES ({},".format(table_name, loan[0])
 				for k in features.keys():
 					if features[k] in STR_TYPES: query += '\''
-					query += "{}".format(loan[self.col_name_list[k]])
+					if k == 'desc':
+						d = loan[self.col_name_list[k]]
+						if d is None:
+							query += "{}".format(d)
+						else:
+							d = clean_html(d)
+							for char in string.punctuation:
+								d = d.replace(char, ' ')
+							if d is not None: d = d.encode('ascii', 'ignore')
+  						query += "{}".format(d)
+					elif k in DESC_WORDS:
+						d = loan[self.col_name_list['desc']]
+						if not d or k not in d:
+							query += "0"
+						else:
+							query += "1"  
+					else:
+						query += "{}".format(loan[self.col_name_list[k]])
 					if features[k] in STR_TYPES: query += '\''
 					query += ","
 				query = query[:-1] + ")"
@@ -156,30 +190,61 @@ class databaseAccess():
 		if(len(years)>0): return max(years)
 		return 0
 
-def updateSecondaryTables():
-	#code that was previously in main
+def setUpDatabase():
+	#Sets up the database for use after it has been downloaded  
+
+	def createSubTables(db,cols):
+		#Creates the subtables that will hold test and training data 
+		
+		for t in db.tables:
+			db.cur.execute("DROP TABLE IF EXISTS {}".format(t))
+
+		#Sets up the approporiate columns for copying over
+		colString = ""
+		for name,cType in cols.iteritems(): 
+			colString+= " " + name
+			colString+= " " + cType + ","
+		colString = colString[:-1]
+		#colString+= "PRIMARY KEY (ID)"
+		
+		for t in db.tables:
+			query = "CREATE TABLE {} ( {})".format(t,colString)
+			db.cur.execute(query)
+
 	db = databaseAccess()
-	flist = {}
-	flist["issue_d"] = "VARCHAR(255)"
-	flist["total_pymnt"] = "INT"
-	flist["zip_code"] = "TEXT"
-	flist["installment"] = "FLOAT"
-	flist["grade"] = "TEXT"
-	flist["sub_grade"] = "TEXT"
-	flist["emp_length"] = "TEXT"
-	flist["home_ownership"] = "TEXT"
-	flist["dti"] = "FLOAT"
-	flist["loan_status"] = "TEXT"
-	flist["last_pymnt_d"] = "TEXT"
-	flist["funded_amnt"] = "INT"
-	flist["exp_r"] = "FLOAT"
-	flist["var"] = "FLOAT"
-	flist["cluster"] = "INT"
-	db.update_table_features(flist)
-	# db.partition_data({"total_pymnt": "INT", "funded_amnt": "INT"})
-	#db.add_columns()
+	#List of columns that will be copied from test/train 
+	columnsToCopy = {
+			 		 "issue_d":"VARCHAR(255)",
+					 "total_pymnt" : "INT",
+					 "zip_code": "TEXT",
+					 "installment":"FLOAT",
+					 "grade": "TEXT",
+					 "sub_grade" :"TEXT",
+					 "emp_length":"TEXT",
+					 "home_ownership":"TEXT",
+					 "dti":"FLOAT",
+					 "loan_status":"TEXT",
+					 "last_pymnt_d":"TEXT",
+					 "last_pymnt_amnt":"FLOAT",
+					 "funded_amnt":"INT",
+					 "desc":"TEXT",
+					 "term":"TEXT",
+
+			 		}
+			 		#List of columns 
+	columnsToCreate = { "exp_r":"FLOAT",
+						"var": "FLOAT",
+						"cluster":"INT"
+					  }
+
+	db.update_table_features(columnsToCopy)
+	db.add_columns(columnsToCreate)
+	print "Database Set Up Complete! \n"
+
+	
+
+	
 
 if __name__ == "__main__":
-	d = databaseAccess()
-	print databaseAccess.subgradeToInt("G5")
+	setUpDatabase()
 
