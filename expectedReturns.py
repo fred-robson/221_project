@@ -6,7 +6,7 @@ variance of that loan. It does so by:
 	  expected return and the variance of the return
 '''
 DESC_WORDS = ["credit", "lower", "payment", "month", "interest", "bills", "thank", "current", "start", \
-"person", "medic", "higher", "great", "always", "about", "business", "card", "never", "other", "lower"]
+"person", "medic", "higher", "great", "always", "about", "business", "card", "never", "other", "lower"] #TOP 20 WORDS IN THE Descriptions
 
 import collections,random, csv
 import util.machineLearningUtil as mlUtil
@@ -64,7 +64,7 @@ class expectedReturn(mlUtil.gradientDescent):
 		empLength = dbUtil.databaseAccess.numYearsEmployedToInt(dictRow["emp_length"])
 		features = {"dti":dictRow["dti"],"grade":gradeInt,"emp_length":empLength}
 		for word in DESC_WORDS:
-			features[word] = dictRow[word]
+			features[word] = int(dictRow[word])
 		return features
 
 		
