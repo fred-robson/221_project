@@ -148,9 +148,6 @@ class kMeans():
 			d = defaultdict(list)
 			for l in self.loans:
 				zip_code = l[self.columns.index('zip_code')]
-				purpose = l[self.columns.index('purpose')]
-
-				# assignment = determineCluster(zip_code, purpose)
 				z = list(zip_code)
 				z[2] = 'x'
 				zip_code = "".join(z)
