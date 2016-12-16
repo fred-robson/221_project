@@ -231,6 +231,7 @@ def setUpDatabase():
 					 "term":"TEXT",
 
 			 		}
+	for d in DESC_WORDS: columnsToCopy[d] = "TEXT"
 			 		#List of columns 
 	columnsToCreate = { "exp_r":"FLOAT",
 						"var": "FLOAT",
