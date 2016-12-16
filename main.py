@@ -22,8 +22,8 @@ def learnExpRVar(loanTerm):
 def learnCov(loanTerm):
 	#Learns the covariance for every loan
 	db = databaseAccess()
-	if loanTerm == '60':k = kMeans(db,"TrainSixty")
-	else: k = kMeans(db,"TrainThirtySix")
+	if loanTerm == '60':k = kMeans(db,"TestSixty", False)
+	else: k = kMeans(db,"TestThirtySix", False)
 
 def outputReturnsCSV(loanTerm):
 	'''
@@ -34,8 +34,8 @@ def outputReturnsCSV(loanTerm):
 
 	if loanTerm is "36": table = "TestThirtySix"
 	else: table = "TestSixty"
-	#covariances = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p",'rb'))                 
-	covariances = {1:{1:0.1}}
+	covariances = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p",'rb'))                 
+	#covariances = {1:{1:0.1}}
 	with open("results.csv","wb") as csvfile:
 		writer = csv.writer(csvfile,delimiter=",")
 		headers = ["Date","Baseline","MDP","Optimal Sharpe","Oracle","Expected Sharpe"]
@@ -81,8 +81,8 @@ def getUserInput():
 
 if __name__ == "__main__":
 	term =  getUserInput()
-	#learnExpRVar(term)
-	#learnCov(term)
+	learnExpRVar(term)
+	learnCov(term)
 	outputReturnsCSV(term)
 
 

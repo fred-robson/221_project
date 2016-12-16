@@ -42,6 +42,11 @@ class databaseAccess():
 		self.cur.execute(execute_string)
 		return self.cur.fetchall()
 
+	def extract_loans_with_zip(self, zip):
+		execute_string = "SELECT * FROM loan WHERE zip_code = '{}' ".format(zip)
+		self.cur.execute(execute_string)
+		return self.cur.fetchall()
+
 	def extract_table_loans(self, table_name):
 		execute_string = ("SELECT * FROM {}").format(table_name)
 		self.cur.execute(execute_string)
@@ -210,6 +215,7 @@ def setUpDatabase():
 		for t in db.tables:
 			query = "CREATE TABLE {} ( {})".format(t,colString)
 			db.cur.execute(query)
+
 
 	db = databaseAccess()
 	#List of columns that will be copied from test/train 
