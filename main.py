@@ -32,8 +32,12 @@ def outputReturnsCSV(loanTerm):
 		-loanTerm: Either 36 or 60 depending on how long you want the loans to be
 	'''
 
-	if loanTerm is "36": table = "TestThirtySix"
-	else: table = "TestSixty"
+	if loanTerm is "36": 
+		table = "TestThirtySix"
+		self.termLength = 36
+	else: 
+		table = "TestSixty"
+		self.termLength = 60
 	covariances = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p",'rb'))                 
 	#covariances = {1:{1:0.1}}
 	with open("results.csv","wb") as csvfile:
