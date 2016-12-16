@@ -5,6 +5,8 @@ import sys,csv
 import string
 import re
 from tfidf import TFIDF_Extractor
+from tqdm import tqdm
+
 TABLE = 'loan'
 DB_NAME = 'database.sqlite'
 
@@ -65,7 +67,7 @@ class databaseAccess():
   				cleantext = re.sub(cleanr, '', desc)
   				return cleantext
 
-			for loan in loan_set:
+			for loan in tqdm(loan_set, desc="Copying Loans"):
 				query = "INSERT OR IGNORE INTO {} VALUES ({},".format(table_name, loan[0])
 				for k in features.keys():
 					if features[k] in STR_TYPES: query += '\''
@@ -193,40 +195,63 @@ class databaseAccess():
 		if(len(years)>0): return max(years)
 		return 0
 
-def updateSecondaryTables():
-	#code that was previously in main
+def setUpDatabase():
+	#Sets up the database for use after it has been downloaded  
+
+	def createSubTables(db,cols):
+		#Creates the subtables that will hold test and training data 
+		
+		for t in db.tables:
+			db.cur.execute("DROP TABLE IF EXISTS {}".format(t))
+
+		#Sets up the approporiate columns for copying over
+		colString = ""
+		for name,cType in cols.iteritems(): 
+			colString+= " " + name
+			colString+= " " + cType + ","
+		colString = colString[:-1]
+		#colString+= "PRIMARY KEY (ID)"
+		
+		for t in db.tables:
+			query = "CREATE TABLE {} ( {})".format(t,colString)
+			db.cur.execute(query)
+
+
 	db = databaseAccess()
-	flist = {}
-	flist["issue_d"] = "VARCHAR(255)"
-	flist["total_pymnt"] = "INT"
-	flist["zip_code"] = "TEXT"
-	flist["installment"] = "FLOAT"
-	flist["grade"] = "TEXT"
-	flist["sub_grade"] = "TEXT"
-	flist["emp_length"] = "TEXT"
-	flist["home_ownership"] = "TEXT"
-	flist["dti"] = "FLOAT"
-	flist["loan_status"] = "TEXT"
-	flist["last_pymnt_d"] = "TEXT"
-	flist["last_pymnt_amnt"] = "FLOAT"
-	flist["funded_amnt"] = "INT"
-	flist["desc"] = "TEXT"
-	flist["term"] = "TEXT"
+	#List of columns that will be copied from test/train 
+	columnsToCopy = {
+			 		 "issue_d":"VARCHAR(255)",
+					 "total_pymnt" : "INT",
+					 "zip_code": "TEXT",
+					 "installment":"FLOAT",
+					 "grade": "TEXT",
+					 "sub_grade" :"TEXT",
+					 "emp_length":"TEXT",
+					 "home_ownership":"TEXT",
+					 "dti":"FLOAT",
+					 "loan_status":"TEXT",
+					 "last_pymnt_d":"TEXT",
+					 "last_pymnt_amnt":"FLOAT",
+					 "funded_amnt":"INT",
+					 "desc":"TEXT",
+					 "term":"TEXT",
 
-	for i in range(20):
-		flist[DESC_WORDS[i]] = "INT"
+			 		}
+	for d in DESC_WORDS: columnsToCopy[d] = "TEXT"
+			 		#List of columns 
+	columnsToCreate = { "exp_r":"FLOAT",
+						"var": "FLOAT",
+						"cluster":"INT"
+					  }
 
-	flist2 = {}
-	flist2["exp_r"] = "FLOAT"
-	flist2["var"] = "FLOAT"
-	flist2["cluster"] = "INT"
+	db.update_table_features(columnsToCopy)
+	db.add_columns(columnsToCreate)
+	print "Database Set Up Complete! \n"
 
-	db.update_table_features(flist)
-	db.add_columns(flist2)
+	
 
+	
 
 if __name__ == "__main__":
-	d = databaseAccess()
-	# updateSecondaryTables()
-	print databaseAccess.subgradeToInt("G5")
+	setUpDatabase()
 

@@ -262,6 +262,20 @@ class kMeans():
 			self.covariances = calculate_group_cov()
 			pickle.dump(self.covariances, open(PICKLE_DIRECTORY+table+"covariances.p","wb"))
 
+<<<<<<< HEAD
 db = databaseAccess()
 kmeans = kMeans(db, "TrainSixty", False)
 		
+=======
+<<<<<<< HEAD
+=======
+if __name__ == "__main__":
+	db = databaseAccess()
+	kmeans = kMeans(db, "TrainSixty", False)
+
+>>>>>>> 87423e9bc4469bbccf3c24933296f08af2007f46
+
+if __name__ == "__main__":
+	db = databaseAccess()
+	kmeans = kMeans(db, "TrainSixty")
+>>>>>>> abd97ce543bcea3920a8c90a42bd12377ea6c061
