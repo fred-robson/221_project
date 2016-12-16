@@ -2,7 +2,7 @@
 import util.machineLearningUtil as mlUtil
 import sys,csv
 import databaseUtil as dbUtil
-#from tqdm import tqdm
+from tqdm import tqdm
 from baseline import Baseline
 from oracle import oracle
 
@@ -54,7 +54,7 @@ class optimalPortfolio():
 			ri = liInfo["exp_r"]
 			sumWeightCov = 0
 			for lj,ljInfo in self.possibleLoans.iteritems():
-				if(lj==li): cov =liInfo["var"]
+				if(lj==li or liInfo["cluster"] == ljInfo["cluster"]): cov =liInfo["var"]
 				else: cov = self.covariances[liInfo["cluster"]][ljInfo["cluster"]]
 				sumWeightCov+=self.weights[lj]*cov
 		
@@ -120,7 +120,7 @@ def test():
 
 if __name__ == "__main__":
 	covariances = {1:{1:0.1}}
-	with open("results.csv","wb") as csvfile:
+	with open("xresults.csv","wb") as csvfile:
 		writer = csv.writer(csvfile,delimiter=",")
 		for year in ["2011","2012","2013","2014","2015"]:
 			for month in ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]: 

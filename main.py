@@ -84,9 +84,9 @@ def getUserInput():
 	return args[0]
 
 if __name__ == "__main__":
-	term =  getUserInput()
-	learnExpRVar(term)
-	learnCov(term)
+	#term =  getUserInput()
+	#learnExpRVar(term)
+	#learnCov(term)
 	outputReturnsCSV(term)
 
 

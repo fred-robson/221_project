@@ -48,7 +48,6 @@ class ValueIteration(MDPAlgorithm):
 
         # Compute the optimal policy now
         pi = computeOptimalPolicy(mdp, V)
-        print "ValueIteration: %d iterations" % numIters
         self.pi = pi
         self.V = V
 
