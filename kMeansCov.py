@@ -29,6 +29,7 @@ class kMeans():
 			for k1, v1 in self.cash_flow_dict.iteritems():
 				for k2, v2 in self.cash_flow_dict.iteritems():
 					cov = numpy.cov(numpy.vstack((v1, v2)))
+					print cov
 					covariances[k1][k1] = cov[0][0]
 					covariances[k1][k2] = cov[0][1] 
 					covariances[k2][k1] = cov[1][0]
@@ -212,8 +213,9 @@ class kMeans():
 			clusters = {}
 			for i in range(len(assignments)):
 				clusterNum = assignments[i]
-				loan = self.loanIndexes[i]
-				self.db.updateTableValue(table, self.dictRow(table, loan), "cluster", clusterNum)
+				l = self.loanIndexes[i]
+				loanDict = self.dictRow(table, l)
+				self.db.updateTableValue(table, loanDict, "cluster", clusterNum)
 				if clusterNum not in clusters: clusters[clusterNum] = []
 				clusters[clusterNum].append(loan)
 			return clusters
