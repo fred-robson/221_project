@@ -207,6 +207,7 @@ class kMeans():
 				for k in keys:
 					zipCodeMean = 0
 					for l in clusters[k]:
+						print int(l[self.columns.index('zip_code')][:3])
 						zipCodeMean += int(l[self.columns.index('zip_code')][:3])
 					zipCodeMean /= len(clusters[k])
 					newmu.append(findClosestLoanWithZip(str(zipCodeMean)))
