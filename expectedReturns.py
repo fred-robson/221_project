@@ -129,9 +129,13 @@ class expectedReturn(mlUtil.gradientDescent):
 		'''
 		if usePickle: self.weights = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"weights.p",'rb'))                 
 		else: self.learnWeights(updateWeights,numItersGD,eta)
-		all_rows = self.db.con.execute("SELECT * FROM {}".format(self.testTable))
 		
-		for row in tqdm(all_rows,total=30000,desc="30000 just an estimate of db size"):
+		self.db.cur.execute("SELECT Count(*) FROM {}".format(self.testTable))
+		rowNums = self.db.cur.fetchone()[0]
+		all_rows = self.db.con.execute("SELECT * FROM {}".format(self.testTable))
+
+		
+		for row in tqdm(all_rows,total=rowNums,desc="Calculating Expected Return and Variance"):
 			dictRow = self.dictRow(row)
 			expReturn, var = self.calculateSingleExpReturnAndVar(dictRow,numItersMC)
 			self.db.updateTableValue(self.testTable,dictRow,"exp_r",expReturn)

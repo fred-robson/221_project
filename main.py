@@ -1,12 +1,14 @@
 '''
 Allows the user to run everything from start to finish
 '''
-import sys, loansMDP
+import sys, loansMDP,csv, optimalPortfolio
 from expectedReturns import expectedReturn
 from kMeansCov import kMeans
-from optimalPortfolio import optimalPortfolio
+from optimalPortfolio import optimalPortfolio as op
 from databaseUtil import databaseAccess
 from loansMDP import optimalMDPAnalysis
+from baseline import Baseline
+from oracle import oracle
 
 
 def learnExpRVar(loanTerm):
@@ -49,7 +51,7 @@ def outputReturnsCSV(loanTerm):
 				
 				#Calculate sharpes optimal
 				possLoans = optimalPortfolio.getLoansFromTable(table,date)
-				p = optimalPortfolio(possLoans,covariances,0)	
+				p = op(possLoans,covariances,0)	
 				p.findOptimalPortfolio(10,0.01)
 				pReturn = p.calculateActualReturn()
 				expP = p.expectedReturn()
