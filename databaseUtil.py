@@ -40,6 +40,11 @@ class databaseAccess():
 		self.cur.execute(execute_string)
 		return self.cur.fetchall()
 
+	def extract_loans_with_zip(self, zip):
+		execute_string = "SELECT * FROM loan WHERE zip_code = '{}' ".format(zip)
+		self.cur.execute(execute_string)
+		return self.cur.fetchall()
+
 	def extract_table_loans(self, table_name):
 		execute_string = ("SELECT * FROM {}").format(table_name)
 		self.cur.execute(execute_string)
@@ -207,7 +212,6 @@ def updateSecondaryTables():
 	flist["funded_amnt"] = "INT"
 	flist["desc"] = "TEXT"
 	flist["term"] = "TEXT"
-	flist["purpose"] = "TEXT"
 
 	for i in range(20):
 		flist[DESC_WORDS[i]] = "INT"

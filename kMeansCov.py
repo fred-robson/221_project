@@ -2,10 +2,15 @@ from databaseUtil import databaseAccess
 from collections import defaultdict
 from datetime import date
 import cPickle as pickle
+from util.zipDist import Zip_Codes
+from util.pyzipcode import ZipCodeDatabase
 import numpy
+import random
 PICKLE_DIRECTORY = "data/"
 YEARS = ["2011","2012","2013","2014","2015"]
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+NUM_CLUSTERS = 10
+MAX_ITERS = 5
 
 class kMeans():
 	def __init__(self, db, table, usePickle=True):
@@ -16,17 +21,10 @@ class kMeans():
 				{loangroup1: {loangroup1: cov(1,1), loangroup2: cov(1,2)}, loangroup2: {etc}}
 			Requires numpy.
 			'''
-			covariances = {}
-			for k, v in self.cluster_variances.iteritems():
-				covariances[k] = {}
-			# covariances = defaultdict(lambda: defaultdict(int))
 
-			# for k1, v1 in tqdm(self.cluster_variances.iteritems(),total=len(self.cluster_variances)):
-			for k1, v1 in self.cluster_variances.iteritems():
-				for k2, v2 in self.cluster_variances.iteritems():
-					# print k1, k2
-					print v1, v2
-					cov = numpy.cov(v1, v2)
+			for k1, v1 in self.cash_flow_dict.iteritems():
+				for k2, v2 in self.cash_flow_dict.iteritems():
+					cov = numpy.cov(numpy.vstack(v1, v2))
 					print cov
 					covariances[k1][k1] = cov[0][0]
 					covariances[k1][k2] = cov[0][1] 
@@ -144,40 +142,125 @@ class kMeans():
 		Returns map of cluster_id (zip_code) => a vector of all loans assigned.
 		'''
 		def cluster_loans():
-			# clustering by zip_code
-			d = defaultdict(list)
-			for l in self.loans:
-				zip_code = l[self.columns.index('zip_code')]
-				z = list(zip_code)
-				z[2] = 'x'
-				zip_code = "".join(z)
-				if zip_code in d:
-					d[zip_code].append(l)
-				else:                                            
-					d[zip_code] = [l]
 
-			return d
+		# want normalize home ownership (0, 1) with regards to miles otherwise wont do anything or have big effect.
+			def cluster_points(loans, mu):
+				
+				def clusterAssignment(zc, zipCodeSet, ownBool):
+					bestmukey = None
+					bestmukeyDist = float("inf")
+					for l in mu:
+						iterZC = l[self.columns.index('zip_code')]
+						if iterZC == zc:
+							bestmukey = l
+							break
+						else:
+							iZipCodeSet = [k for k in zipcodes if iterZC[:3] in k.zip]
+							dist = 0
+							for x in zipCodeSet:
+								for y in iZipCodeSet:
+									dist += zipDist.get_distance(x.zip, y.zip)
+							length1 = len(zipCodeSet)
+							length2 = len(iZipCodeSet)
+							if length1 == 0: length1 = 1
+							if length2 == 0: length2 = 1
+							computedAvgDist = dist/(length1 * length2)
+		 					if computedAvgDist < bestmukeyDist:
+								bestmukey = l
+								bestmukeyDist = computedAvgDist
+					cache[zc] = bestmukey
+					return bestmukey
+
+				clusters  = {}
+				cache = {}
+				for l in loans:
+					zc = l[self.columns.index('zip_code')]
+					ho = l[self.columns.index('home_ownership')]
+					if zc in cache:
+						assignment = cache[zc]
+					else:
+						zipCodeSet = [k for k in zipcodes if zc[:3] in k.zip]
+						assignment = clusterAssignment(zc, zipCodeSet, ho == "OWN")
+						cache[zc] = assignment
+					if assignment not in clusters: clusters[assignment] = []
+					clusters[assignment].append(l)
+				return clusters
+
+			def reevaluate_centers(mu, clusters):
+				def findClosestLoanWithZip(orig_zip):
+					print orig_zip
+					validNewMus = self.db.extract_loans_with_zip(orig_zip+"xx")
+					mileRadiusCounter = 1
+					while len(validNewMus) == 0:
+						formattedZips = [z for z in zipcodes if orig_zip in z.zip]
+						for i in formattedZips:
+							closeZips = zipDist.close_zips(i, mileRadiusCounter)
+							for cz in closeZips:
+								validNewMus = self.db.extract_loans_with_zip(str(cz[:3]))
+								if len(validNewMus) > 0: return validNewMus[0]
+						mileRadiusCounter += 1
+					print orig_zip, validNewMus[0]
+					return validNewMus[0]
+
+				newmu = []
+				keys = sorted(clusters.keys(), key=lambda loan: loan[self.columns.index('zip_code')])
+				for k in keys:
+					zipCodeMean = 0
+					for l in clusters[k]:
+						zipCodeMean += int(l[self.columns.index('zip_code')][:3])
+					zipCodeMean /= len(clusters[k])
+					newmu.append(findClosestLoanWithZip(str(zipCodeMean)))
+				return newmu
+
+			def has_converged(mu, oldmu):
+				return set(mu) == set(oldmu)
+
+			def find_centers(loans, K):
+			# Initialize to K random centers
+				oldmu = random.sample(loans, K)
+				mu = random.sample(loans, K)
+				i = 0
+				while not has_converged(mu, oldmu) or i >= MAX_ITERS:
+					oldmu = mu
+					# Assign all points in loans to clusters
+					clusters = cluster_points(loans, mu)
+					# Reevaluate centers
+					mu = reevaluate_centers(oldmu, clusters)
+					i += 1
+				return(mu, clusters)
+
+			zcdb = ZipCodeDatabase()
+			zipcodes = zcdb.find_zip()
+			zipDist = Zip_Codes()
+			return find_centers(self.loans, NUM_CLUSTERS)[1]
+
+		def update_table_clusters(table):
+			sorted_clusters = sorted(self.clusters.keys(), key=lambda loan: loan[self.columns.index('zip_code')])
+			for i in range(len(sorted_clusters.keys())):
+				for loan in sorted_clusters.keys()[i]:
+					self.db.updateTableValue(table, {id: loan[self.columns.index("id")]}, "cluster", i)
 
 		def extract_term_length(table):
-			if table.find("Sixty") > -1:
-				return 60
-			else:
-				return 36
+			if table.find("Sixty") > -1: return 60
+			return 36
 
 		self.db = db
 		self.termLength = extract_term_length(table)
 		if usePickle:
-			self.covariances = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p",'rb'))
+			self.clusters = pickle.load(open(PICKLE_DIRECTORY+table+"clusters.p", 'rb'))
+			self.covariances = pickle.load(open(PICKLE_DIRECTORY+table+"covariances.p",'rb'))
 		else:
 			self.loans = db.extract_table_loans(table)
 			self.columns = db.getColumnNames(table)
 			self.clusters = cluster_loans()
-			# self.cash_flow_dict = generate_cash_flow_vectors()
-			self.cluster_variances = cluster_variance()
+			update_table_clusters(table)
+			pickle.dump(self.clusters, open(PICKLE_DIRECTORY+table+"clusters.p","wb"))
+
+			self.cash_flow_dict = generate_cash_flow_vectors()
+			# self.cluster_variances = cluster_variance()
 			self.covariances = calculate_group_cov()
-			pickle.dump(self.covariances, open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p","wb"))
+			pickle.dump(self.covariances, open(PICKLE_DIRECTORY+table+"covariances.p","wb"))
 
 db = databaseAccess()
 kmeans = kMeans(db, "TrainSixty", False)
-
-
+		
