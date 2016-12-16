@@ -9,10 +9,14 @@ import random
 PICKLE_DIRECTORY = "data/"
 YEARS = ["2011","2012","2013","2014","2015"]
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-NUM_CLUSTERS = 10
-MAX_ITERS = 5
+NUM_CLUSTERS = 5
+MAX_ITERS = 1
 
 class kMeans():
+	def dictRow(self, table, row):
+	#Converts a row from sql from a list to a dict
+		return {c:r for c,r in zip(self.db.getColumnNames(table),row)} 
+
 	def __init__(self, db, table, usePickle=True):
 
 		def calculate_group_cov():
@@ -24,11 +28,10 @@ class kMeans():
 
 			for k1, v1 in self.cash_flow_dict.iteritems():
 				for k2, v2 in self.cash_flow_dict.iteritems():
-					cov = numpy.cov(numpy.vstack(v1, v2))
-					print cov
+					cov = numpy.cov(numpy.vstack((v1, v2)))
 					covariances[k1][k1] = cov[0][0]
 					covariances[k1][k2] = cov[0][1] 
-					covariances [k2][k1] = cov[1][0]
+					covariances[k2][k1] = cov[1][0]
 					covariances[k2][k2] = cov[1][1]
 			return covariances
 
@@ -91,191 +94,161 @@ class kMeans():
 				d[k] = cash_flow				
 			return d
 
-		# variance = sum((x/row["funded_amnt"] - expReturn)**2 for x in allReturns)/(len(allReturns)-1)
-		def cluster_variance():
-			def months_paid(l):
-				def add_months(d, months_to_add):
-					month = d.month - 1 + months_to_add
-					year = int(d.year + month / 12)
-					month = month % 12 + 1
-					return date(year, month, 1)
+		def kmeans(examples, K, maxIters):
 
+			def dotProduct(d1, d2):
+				if len(d1) < len(d2):
+					return dotProduct(d2, d1)
+				else:
+					return sum(d1.get(f, 0) * v for f, v in d2.items())
 
-				loan_term = int(l[self.columns.index('term')].split()[0])
-				loan_issue_date = l[self.columns.index('issue_d')]
-				loan_last_pymnt_date = l[self.columns.index('last_pymnt_d')]
-				# print loan_issue_date, loan_last_pymnt_date
-				if loan_last_pymnt_date == "None": loan_last_pymnt_date = 'Jun-2016'
+			def reevaluate_centers(centers, clusters):
+				newcenters = []
+				for i in range(len(centers)):
+					new = {}
+					data = clusters[i] #list of maps
+					for p in data: #a map
+						for pKey, pValue in p.iteritems():
+							if pKey not in new:
+								new[pKey] = 0
+							new[pKey] += pValue
+					for k,v in new.iteritems():
+						new[k] = v/(len(data)+1)
+					newcenters.append(new)
+				return newcenters
 
-				issue_month = MONTHS.index(loan_issue_date[: loan_issue_date.index('-')]) + 1
-				issue_year = int(loan_issue_date[loan_issue_date.index('-') + 1:])
-				issue_date = date(issue_year, issue_month, 1)
+			def zipCodeDistance(centerZip, exampleZip):
+				if len(centerZip) == 2: centerZip = "0" + centerZip 
+				if len(exampleZip) == 2: exampleZip = "0" + exampleZip
 
-				last_month = MONTHS.index(loan_last_pymnt_date[: loan_last_pymnt_date.index('-')]) + 1
-				last_year = int(loan_last_pymnt_date[loan_last_pymnt_date.index('-') + 1:])
-				last_date = date(last_year, last_month, 1)
-				projected_end_date = add_months(issue_date, loan_term)
+				if centerZip not in zipSetCache:
+					zipCodeSet1 = [k for k in zipcodes if centerZip in k.zip]
+					zipSetCache[centerZip] = zipCodeSet1
+				else:
+					zipCodeSet1 = zipSetCache[centerZip]
 
-				if last_date < projected_end_date:
-					return self.db.monthsDifference((last_date.month, last_date.year), (issue_date.month, issue_date.year))
-				return loan_term
+				if exampleZip not in zipSetCache:
+					zipCodeSet2 = [k for k in zipcodes if exampleZip in k.zip]
+					zipSetCache[exampleZip] = zipCodeSet2
+				else:
+					zipCodeSet2 = zipSetCache[exampleZip]
 
-			d = {}
-			for k,v in self.clusters.iteritems():
-				clusterReturns = []
-				total_funded_amt = 0
-				for loan in v:
-					issue_date = self.db.stringToDate(loan[self.columns.index('issue_d')])
-					loan_term = int(loan[self.columns.index('term')].split()[0])
-					loanMonthsCompleted = months_paid(loan)
-					total_funded_amt += loan[self.columns.index('installment')] * min(loan_term, self.db.monthsDifference((5, 2015), issue_date))
-					clusterReturns.append(loanMonthsCompleted * loan[self.columns.index('installment')])
+				dist = 0
+				for x in zipCodeSet1:
+					for y in zipCodeSet2:
+						dist += zipDist.get_distance(x.zip, y.zip)
+				return dist/(len(zipCodeSet1) * len(zipCodeSet2))
 
-				expReturn = (sum(clusterReturns)/total_funded_amt)/len(clusterReturns)
-				if len(clusterReturns) > 1:
-					variance = sum((x/total_funded_amt - expReturn)**2 for x in clusterReturns)/(len(clusterReturns)-1) #-1 for sample
-					d[k] = variance
-			return d
-
-		'''
-		Partitions loans based on first two numbers of zip_code. 
-		Returns map of cluster_id (zip_code) => a vector of all loans assigned.
-		'''
-		def cluster_loans():
-
-		# want normalize home ownership (0, 1) with regards to miles otherwise wont do anything or have big effect.
-			def cluster_points(loans, mu):
-				
-				def clusterAssignment(zc, zipCodeSet, ownBool):
-					bestmukey = None
-					bestmukeyDist = float("inf")
-					for l in mu:
-						iterZC = l[self.columns.index('zip_code')]
-						if iterZC == zc:
-							bestmukey = l
-							break
-						else:
-							iZipCodeSet = [k for k in zipcodes if iterZC[:3] in k.zip]
-							dist = 0
-							for x in zipCodeSet:
-								for y in iZipCodeSet:
-									dist += zipDist.get_distance(x.zip, y.zip)
-							length1 = len(zipCodeSet)
-							length2 = len(iZipCodeSet)
-							if length1 == 0: length1 = 1
-							if length2 == 0: length2 = 1
-							computedAvgDist = dist/(length1 * length2)
-		 					if computedAvgDist < bestmukeyDist:
-								bestmukey = l
-								bestmukeyDist = computedAvgDist
-					cache[zc] = bestmukey
-					return bestmukey
-
-				clusters  = {}
-				cache = {}
-				for l in loans:
-					zc = l[self.columns.index('zip_code')]
-					ho = l[self.columns.index('home_ownership')]
-					if zc in cache:
-						assignment = cache[zc]
+			def calculateDistance(center, currExample):
+				res = {}
+				for k, v in center.iteritems():
+					if k == "zip_code":
+						res[k] = zipCodeDistance(str(center[k]), str(currExample[k]))
 					else:
-						zipCodeSet = [k for k in zipcodes if zc[:3] in k.zip]
-						assignment = clusterAssignment(zc, zipCodeSet, ho == "OWN")
-						cache[zc] = assignment
-					if assignment not in clusters: clusters[assignment] = []
-					clusters[assignment].append(l)
-				return clusters
+						res[k] = abs(center[k] - currExample[k])#homeOwnershipDistance(center[k], currExample[k])
+				return dotProduct(res, res)
 
-			def reevaluate_centers(mu, clusters):
-				def findClosestLoanWithZip(orig_zip):
-					print orig_zip
-					validNewMus = self.db.extract_loans_with_zip(orig_zip+"xx")
-					mileRadiusCounter = 1
-					while len(validNewMus) == 0:
-						formattedZips = [z for z in zipcodes if orig_zip in z.zip]
-						for i in formattedZips:
-							closeZips = zipDist.close_zips(i, mileRadiusCounter)
-							for cz in closeZips:
-								validNewMus = self.db.extract_loans_with_zip(str(cz[:3]))
-								if len(validNewMus) > 0: return validNewMus[0]
-						mileRadiusCounter += 1
-					print orig_zip, validNewMus[0]
-					return validNewMus[0]
+			def classify(centers, currExample):
+				bestmukey = 0
+				bestmukeyDist = float("inf")
 
-				newmu = []
-				keys = sorted(clusters.keys(), key=lambda loan: loan[self.columns.index('zip_code')])
-				for k in keys:
-					zipCodeMean = 0
-					for l in clusters[k]:
-						print int(l[self.columns.index('zip_code')][:3])
-						zipCodeMean += int(l[self.columns.index('zip_code')][:3])
-					zipCodeMean /= len(clusters[k])
-					newmu.append(findClosestLoanWithZip(str(zipCodeMean)))
-				return newmu
+				for i in range(len(centers)):
+					center = centers[i]
+					distance = calculateDistance(center, currExample)
+					if distance < bestmukeyDist:
+						bestmukey = i
+						bestmukeyDist = distance
+				return bestmukey
 
-			def has_converged(mu, oldmu):
-				return set(mu) == set(oldmu)
+			def stringify(dictToString):
+				return str(dictToString["zip_code"]) + str(dictToString["home_ownership"])
 
-			def find_centers(loans, K):
 			# Initialize to K random centers
-				oldmu = random.sample(loans, K)
-				mu = random.sample(loans, K)
-				i = 0
-				while not has_converged(mu, oldmu) or i >= MAX_ITERS:
-					oldmu = mu
-					# Assign all points in loans to clusters
-					clusters = cluster_points(loans, mu)
-					# Reevaluate centers
-					mu = reevaluate_centers(oldmu, clusters)
-					i += 1
-				return(mu, clusters)
+			oldcenters = random.sample(examples, K)
+			centers = random.sample(examples, K)
+			assignments = range(len(examples))
+			i = 0
+			zipSetCache = {}
 
-			zcdb = ZipCodeDatabase()
-			zipcodes = zcdb.find_zip()
-			zipDist = Zip_Codes()
-			return find_centers(self.loans, NUM_CLUSTERS)[1]
+			#while not has_converged(centers, oldcenters) and i < MAX_ITERS:
+			while i < MAX_ITERS:
+				oldcenters = centers
+				# Assign all points in examples to clusters
+				clusters  = {}
+				for init in range(len(centers)):
+					clusters[init] = []
 
-		def update_table_clusters(table):
-			sorted_clusters = sorted(self.clusters.keys(), key=lambda loan: loan[self.columns.index('zip_code')])
-			for i in range(len(sorted_clusters.keys())):
-				for loan in sorted_clusters.keys()[i]:
-					self.db.updateTableValue(table, {id: loan[self.columns.index("id")]}, "cluster", i)
+				cache = {}
+				for i in range(len(examples)):
+					currExample = examples[i]
+					if stringify(currExample) in cache:
+						assignments[i] = cache[stringify(currExample)]
+					else:
+						assignmentNum = classify(centers, currExample)
+						assignments[i] = assignmentNum
+						cache[stringify(currExample)] = assignmentNum
+					if assignmentNum not in clusters: clusters[assignmentNum] = []
+					clusters[assignmentNum].append(examples[i])
+				# Reevaluate centers
+				centers = reevaluate_centers(oldcenters, clusters)
+				i += 1
+			return centers, assignments
 
-		def extract_term_length(table):
-			if table.find("Sixty") > -1: return 60
-			return 36
+		def formulateExamples(loans):
+			examples = []
+			exampleIndexes = []
+			for l in loans:
+				zc = l[self.columns.index('zip_code')][:3]
+				h_o = l[self.columns.index('home_ownership')]
+				if h_o == "RENT":
+					ho = 0
+				else:
+					ho = 1
+				examples.append({"zip_code": int(zc), "home_ownership": ho})
+				exampleIndexes.append(l) 
+			return examples, exampleIndexes
+
+		def update_table_kclusters(table, assignments):
+			clusters = {}
+			for i in range(len(assignments)):
+				clusterNum = assignments[i]
+				loan = self.loanIndexes[i]
+				self.db.updateTableValue(table, self.dictRow(table, loan), "cluster", clusterNum)
+				if clusterNum not in clusters: clusters[clusterNum] = []
+				clusters[clusterNum].append(loan)
+			return clusters
+
+		def term(table):
+			if table.find("ThirtySix") > -1: return 36
+			return 60
+
 
 		self.db = db
-		self.termLength = extract_term_length(table)
+		zcdb = ZipCodeDatabase()
+		zipcodes = zcdb.find_zip()
+		zipDist = Zip_Codes() 
+		self.termLength = term(table)
 		if usePickle:
-			self.clusters = pickle.load(open(PICKLE_DIRECTORY+table+"clusters.p", 'rb'))
-			self.covariances = pickle.load(open(PICKLE_DIRECTORY+table+"covariances.p",'rb'))
+			self.clusters = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"clusters.p", 'rb'))
+			self.covariances = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p",'rb'))
 		else:
 			self.loans = db.extract_table_loans(table)
 			self.columns = db.getColumnNames(table)
-			self.clusters = cluster_loans()
-			update_table_clusters(table)
-			pickle.dump(self.clusters, open(PICKLE_DIRECTORY+table+"clusters.p","wb"))
+			examples, self.loanIndexes = formulateExamples(self.loans)
+			centers, assignments = kmeans(examples, NUM_CLUSTERS, MAX_ITERS)
+
+			self.clusters = update_table_kclusters(table, assignments)
+			pickle.dump(self.clusters, open(PICKLE_DIRECTORY+str(self.termLength)+"clusters.p","wb"))
 
 			self.cash_flow_dict = generate_cash_flow_vectors()
-			# self.cluster_variances = cluster_variance()
 			self.covariances = calculate_group_cov()
-			pickle.dump(self.covariances, open(PICKLE_DIRECTORY+table+"covariances.p","wb"))
+			pickle.dump(self.covariances, open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p","wb"))
 
-<<<<<<< HEAD
+
 db = databaseAccess()
-kmeans = kMeans(db, "TrainSixty", False)
+kmeans = kMeans(db, "TestSixty", False)
+
 		
-=======
-<<<<<<< HEAD
-=======
-if __name__ == "__main__":
-	db = databaseAccess()
-	kmeans = kMeans(db, "TrainSixty", False)
 
->>>>>>> 87423e9bc4469bbccf3c24933296f08af2007f46
 
-if __name__ == "__main__":
-	db = databaseAccess()
-	kmeans = kMeans(db, "TrainSixty")
->>>>>>> abd97ce543bcea3920a8c90a42bd12377ea6c061
+
