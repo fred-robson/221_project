@@ -31,3 +31,29 @@ Lending Club is an online peer-to-peer lending platform, matching borrowers and 
  See what your returns would have been in a particular month in FIND CORRECT FOLDER
  
  
+
+
+##File Descriptions
+
+main.py: Ouputs a CSV containing your returns for Oracle, Sharpe Ratio, MDP and Baseline
+
+expectedReturns.py; Uses machine learning to calculate transition probabilities, expected return for each loan, and expected variance 
+
+baseline.py: Computes baseline returns (invest in everythign equally)
+
+oracle.py: Computes oracle returns (invest with perfect future knowledge)
+
+optimalPortfolio.py: Given a set of loans expected returns and variance, calculates the optimal portfolio using Sharpe Ratio
+
+tfidf.py: Calculates the twenty most meaningful words in the descriptions
+
+kMeansCov.py: Uses kmeans to calculate covariance
+
+databaseUtil.py: Useful for accessing database
+
+requirements.txt: pip install -r requirements.txt 
+
+/util - a series of helper functions/classes
+
+
+

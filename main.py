@@ -1,7 +1,7 @@
 '''
 Allows the user to run everything from start to finish
 '''
-import sys, loansMDP,csv, optimalPortfolio
+import sys, loansMDP,csv, optimalPortfolio, pickle
 from expectedReturns import expectedReturn
 from kMeansCov import kMeans
 from optimalPortfolio import optimalPortfolio as op
@@ -9,6 +9,10 @@ from databaseUtil import databaseAccess
 from loansMDP import optimalMDPAnalysis
 from baseline import Baseline
 from oracle import oracle
+import pickle
+from tqdm import tqdm
+
+PICKLE_DIRECTORY = "/data"
 
 
 def learnExpRVar(loanTerm):
@@ -34,17 +38,16 @@ def outputReturnsCSV(loanTerm):
 
 	if loanTerm is "36": 
 		table = "TestThirtySix"
-		self.termLength = 36
+		termLength = 36
 	else: 
 		table = "TestSixty"
-		self.termLength = 60
-	covariances = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p",'rb'))                 
-	#covariances = {1:{1:0.1}}
+		termLength = 60
+	covariances = pickle.load(open(PICKLE_DIRECTORY+str(termLength)+"covariances.p",'rb'))                 
 	with open("results.csv","wb") as csvfile:
 		writer = csv.writer(csvfile,delimiter=",")
 		headers = ["Date","Baseline","MDP","Optimal Sharpe","Oracle","Expected Sharpe"]
 		writer.writerow(headers)
-		for year in ["2011","2012","2013","2014","2015"]:
+		for year in tqdm(["2011","2012","2013","2014","2015"],desc = "Calculating Returns"):
 			for i,month in enumerate(["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]): 
 				date = "{}-{}".format(month,year)
 				starting_cash = 1 #Set cash equal to one so no need to worry about investing $1000 in a $100 loan
@@ -84,9 +87,9 @@ def getUserInput():
 	return args[0]
 
 if __name__ == "__main__":
-	#term =  getUserInput()
-	#learnExpRVar(term)
-	#learnCov(term)
+	term =  getUserInput()
+	learnExpRVar(term)
+	learnCov(term)
 	outputReturnsCSV(term)
 
 
