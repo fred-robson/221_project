@@ -121,16 +121,18 @@ class kMeans():
 			def zipCodeDistance(centerZip, exampleZip):
 				if len(centerZip) == 2: centerZip = "0" + centerZip 
 				if len(exampleZip) == 2: exampleZip = "0" + exampleZip
+				centerZip = centerZip[:3]
+				exampleZip = exampleZip[:3]
 
 				if centerZip not in zipSetCache:
-					zipCodeSet1 = [k for k in zipcodes if centerZip[:3] in k.zip]
-					zipSetCache[centerZip[:3]] = zipCodeSet1
+					zipCodeSet1 = [k for k in zipcodes if centerZip in k.zip]
+					zipSetCache[centerZip] = zipCodeSet1
 				else:
 					zipCodeSet1 = zipSetCache[centerZip]
 
 				if exampleZip not in zipSetCache:
-					zipCodeSet2 = [k for k in zipcodes if exampleZip[:3] in k.zip]
-					zipSetCache[exampleZip[:3]] = zipCodeSet2
+					zipCodeSet2 = [k for k in zipcodes if exampleZip in k.zip]
+					zipSetCache[exampleZip] = zipCodeSet2
 				else:
 					zipCodeSet2 = zipSetCache[exampleZip]
 
