@@ -42,8 +42,7 @@ def outputReturnsCSV(loanTerm):
 	else: 
 		table = "TestSixty"
 		termLength = 60
-	#covariances = pickle.load(open(PICKLE_DIRECTORY+str(termLength)+"covariances.p",'rb'))                 
-	covariances = {1:{1:0.1}}
+	covariances = pickle.load(open(PICKLE_DIRECTORY+str(termLength)+"covariances.p",'rb'))                 
 	with open("results.csv","wb") as csvfile:
 		writer = csv.writer(csvfile,delimiter=",")
 		headers = ["Date","Baseline","MDP","Optimal Sharpe","Oracle","Expected Sharpe"]
@@ -88,10 +87,9 @@ def getUserInput():
 	return args[0]
 
 if __name__ == "__main__":
-	#term =  getUserInput()
-	#learnExpRVar(term)
-	#learnCov(term)
-	term = '36'
+	term =  getUserInput()
+	learnExpRVar(term)
+	learnCov(term)
 	outputReturnsCSV(term)
 
 
