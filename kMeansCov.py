@@ -9,8 +9,8 @@ import random
 PICKLE_DIRECTORY = "data/"
 YEARS = ["2011","2012","2013","2014","2015"]
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-NUM_CLUSTERS = 50
-MAX_ITERS = 3
+NUM_CLUSTERS = 10
+MAX_ITERS = 2
 
 class kMeans():
 	def dictRow(self, table, row):
@@ -25,6 +25,9 @@ class kMeans():
 				{loangroup1: {loangroup1: cov(1,1), loangroup2: cov(1,2)}, loangroup2: {etc}}
 			Requires numpy.
 			'''
+			covariances = {}
+			for k, v in self.cash_flow_dict.iteritems():
+				covariances[k] = {}
 
 			for k1, v1 in self.cash_flow_dict.iteritems():
 				for k2, v2 in self.cash_flow_dict.iteritems():
@@ -91,7 +94,7 @@ class kMeans():
 						monthly_cash_flow = 0
 						for loan in v:
 							monthly_cash_flow += contribution_to_month(loan, date(int(year), month, 1)) # if contributing to monthly cash flow.
-						cash_flow.append(monthly_cash_flow)
+						cash_flow.append(monthly_cash_flow/len(v))
 				d[k] = cash_flow				
 			return d
 
@@ -126,12 +129,16 @@ class kMeans():
 
 				if centerZip not in zipSetCache:
 					zipCodeSet1 = [k for k in zipcodes if centerZip in k.zip]
+					if len(zipCodeSet1) == 0:
+						zipCodeSet1 = [k for k in zipcodes if centerZip[:2] in k.zip]
 					zipSetCache[centerZip] = zipCodeSet1
 				else:
 					zipCodeSet1 = zipSetCache[centerZip]
 
 				if exampleZip not in zipSetCache:
 					zipCodeSet2 = [k for k in zipcodes if exampleZip in k.zip]
+					if len(zipCodeSet2) == 0:
+						zipCodeSet2 = [k for k in zipcodes if exampleZip[:2] in k.zip]
 					zipSetCache[exampleZip] = zipCodeSet2
 				else:
 					zipCodeSet2 = zipSetCache[exampleZip]
@@ -170,11 +177,10 @@ class kMeans():
 			oldcenters = random.sample(examples, K)
 			centers = random.sample(examples, K)
 			assignments = range(len(examples))
-			i = 0
 			zipSetCache = {}
 
 			#while not has_converged(centers, oldcenters) and i < MAX_ITERS:
-			while i < MAX_ITERS:
+			for j in range(MAX_ITERS):
 				oldcenters = centers
 				# Assign all points in examples to clusters
 				clusters  = {}
@@ -194,7 +200,7 @@ class kMeans():
 					clusters[assignmentNum].append(examples[i])
 				# Reevaluate centers
 				centers = reevaluate_centers(oldcenters, clusters)
-				i += 1
+				j += 1
 			return centers, assignments
 
 		def formulateExamples(loans):
@@ -219,7 +225,7 @@ class kMeans():
 				loanDict = self.dictRow(table, l)
 				self.db.updateTableValue(table, loanDict, "cluster", clusterNum)
 				if clusterNum not in clusters: clusters[clusterNum] = []
-				clusters[clusterNum].append(loan)
+				clusters[clusterNum].append(l)
 			return clusters
 
 		def term(table):
@@ -234,6 +240,7 @@ class kMeans():
 		self.termLength = term(table)
 		if usePickle:
 			self.clusters = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"clusters.p", 'rb'))
+			self.covariances = calculate_group_cov()
 			self.covariances = pickle.load(open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p",'rb'))
 		else:
 			self.loans = db.extract_table_loans(table)
@@ -249,8 +256,8 @@ class kMeans():
 			pickle.dump(self.covariances, open(PICKLE_DIRECTORY+str(self.termLength)+"covariances.p","wb"))
 
 
-db = databaseAccess()
-kmeans = kMeans(db, "TestSixty", False)
+# db = databaseAccess()
+# kmeans = kMeans(db, "TestSixty", False)
 
 		
 
