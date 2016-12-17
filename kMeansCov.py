@@ -9,8 +9,8 @@ import random
 PICKLE_DIRECTORY = "data/"
 YEARS = ["2011","2012","2013","2014","2015"]
 MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-NUM_CLUSTERS = 5
-MAX_ITERS = 1
+NUM_CLUSTERS = 50
+MAX_ITERS = 3
 
 class kMeans():
 	def dictRow(self, table, row):
@@ -121,6 +121,8 @@ class kMeans():
 			def zipCodeDistance(centerZip, exampleZip):
 				if len(centerZip) == 2: centerZip = "0" + centerZip 
 				if len(exampleZip) == 2: exampleZip = "0" + exampleZip
+				centerZip = centerZip[:3]
+				exampleZip = exampleZip[:3]
 
 				if centerZip not in zipSetCache:
 					zipCodeSet1 = [k for k in zipcodes if centerZip in k.zip]
